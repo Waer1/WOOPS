@@ -1,6 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="D:/Engineering/Second_Year/Second_Term/CMP_2024/Advanced_Programming_Techinques/Project/Search_Engine/Light_Search/MongoDB_JARS/bson-3.2.2-javadoc.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="D:/Engineering/Second_Year/Second_Term/CMP_2024/Advanced_Programming_Techinques/Project/Search_Engine/Light_Search/MongoDB_JARS/mongodb-driver-3.2.2-javadoc.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="D:/Engineering/Second_Year/Second_Term/CMP_2024/Advanced_Programming_Techinques/Project/Search_Engine/Light_Search/MongoDB_JARS/mongodb-driver-core-3.2.2-javadoc.jar">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
