@@ -24,14 +24,28 @@ import java.util.Iterator;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
+import java.util.*; 
 
 @SuppressWarnings("deprecation")
 public class Indexer {
-
+	
+	public static void FileOrganizer()
+	{
+		Map <String, Vector<Integer>> hash = new HashMap<>();
+		Vector<Integer> v = new Vector<Integer> ();
+		v.add(12); 
+		hash.get("ahmed"); 
+		
+		for(Map.Entry pairEntry : hash.entrySet() )
+		{
+			Vector<Integer> v1 = (Vector<Integer>)pairEntry.getValue(); 
+			System.out.println(pairEntry.getKey() + " : " + v1.elementAt(0));
+		}
+	}
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		System.out.println("Hello");
-		
+//		
 		//---------------------------------------------------------------
 		// what to do
 		//	1) get a documents from database
@@ -241,4 +255,65 @@ public class Indexer {
 		return string_array;
 	}
 	
+	
+	/////////////////
+
+    public static ArrayList<String> filter() {
+        ArrayList<String> Words = new ArrayList<String>();
+        try {
+            // here we should put the path of the file from which we read the input
+            File myObj = new File("C:/Users/20115/Dropbox/My PC (LAPTOP-ILAL93NC)/Desktop/text.txt");
+            Scanner myReader = new Scanner(myObj);
+            while (myReader.hasNextLine()) {
+                String data = myReader.nextLine();
+                // System.out.println(data);
+                Words.add(data);
+            }
+            myReader.close();
+        } catch (FileNotFoundException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+        }
+        ArrayList<String> string_array = new ArrayList<>();
+
+        int size = Words.size();
+        for (int i = 0; i < size; i++) {
+            StringTokenizer str_tokenizer = new StringTokenizer(Words.get(i));
+            // Add tokens to our array
+            while (str_tokenizer.hasMoreTokens()) {
+                string_array.add(str_tokenizer.nextToken());
+            }
+        }
+
+        return string_array;
+    }
+    
+
+    public static Map<String, ArrayList<Integer>> FileOrgan() {
+        System.out.println("ezayk");
+        // -------------------------------------------------------
+        // Load file into list
+        ArrayList<String> Words = filter();
+        System.out.println("filter passed");
+
+        Map<String, ArrayList<Integer>> hash = new HashMap<>();
+        int pos = 0;
+        for (String string : Words) {
+
+            if (hash.containsKey(string)) { // exists before?
+                hash.get(string).set(0, (Integer) hash.get(string).get(0) + 1); // increment the tf
+                hash.get(string).add(pos); // add the position to the end of the list
+                pos++; // increment the position
+            } else { // first time ?
+                ArrayList<Integer> A = new ArrayList<>(3);
+                A.add(1); // set TF to 1
+                A.add(0); // set IDF to 0
+                A.add(pos); // add the position to the end
+                pos++; // increment the pos
+                hash.put(string, A);
+            }
+        }
+        return hash ; 
+    }
+   ////////////////////////////////
 }
