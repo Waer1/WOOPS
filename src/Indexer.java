@@ -153,7 +153,7 @@ public class Indexer {
 		        	.build();
 				MongoClient mongoClient = MongoClients.create(settings);
 				MongoDatabase database = mongoClient.getDatabase("test");
-		      return database
+		      return database;
 	}
 	
 	// function get collection from database 
