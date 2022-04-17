@@ -279,7 +279,7 @@ public class Indexer {
         ArrayList<String> Words = new ArrayList<String>();
         try {
             // here we should put the path of the file from which we read the input
-            File myObj = new File(".\\test.txt");
+            File myObj = new File(path);
             Scanner myReader = new Scanner(myObj);
             while (myReader.hasNextLine()) {
                 String data = myReader.nextLine();
@@ -306,31 +306,46 @@ public class Indexer {
     }
     
 
-    public static Map<String, ArrayList<Integer>> FileOrgan() {
-        System.out.println("ezayk");
+    public static void FileOrgan() {
         // -------------------------------------------------------
         // Load file into list
         ArrayList<String> Words = filter();
-        System.out.println("filter passed");
+        try {
+            // here we put the path of the folder which contains file pathes
+            File file = new File("C:/Users/20115/Dropbox/My PC (LAPTOP-ILAL93NC)/Desktop/FilePathes.txt");
+            Scanner path = new Scanner(file);
+            Map<String, ArrayList<Integer>> hash = new HashMap<>();
+            while (path.hasNextLine()) {
+                ArrayList<String> Words = filter(path.nextLine());
+                Boolean found = false; // to count el DF
+                int pos = 0;
+                for (String string : Words) {
 
-        Map<String, ArrayList<Integer>> hash = new HashMap<>();
-        int pos = 0;
-        for (String string : Words) {
-
-            if (hash.containsKey(string)) { // exists before?
-                hash.get(string).set(0, (Integer) hash.get(string).get(0) + 1); // increment the tf
-                hash.get(string).add(pos); // add the position to the end of the list
-                pos++; // increment the position
-            } else { // first time ?
-                ArrayList<Integer> A = new ArrayList<>(3);
-                A.add(1); // set TF to 1
-                A.add(0); // set IDF to 0
-                A.add(pos); // add the position to the end
-                pos++; // increment the pos
-                hash.put(string, A);
+                    if (hash.containsKey(string)) { // exists before?
+                        hash.get(string).set(0, (Integer) hash.get(string).get(0) + 1); // increment the tf
+                        hash.get(string).add(pos); // add the position to the end of the list
+                        pos++; // increment the position
+                        if (!found) // if this is a new document
+                        {
+                            hash.get(string).set(1, hash.get(string).get(1) + 1); // increment DF
+                            found = true;
+                        }
+                    } else { // first time ?
+                        ArrayList<Integer> A = new ArrayList<>(3);
+                        A.add(1); // set TF to 1
+                        A.add(1); // set IDF to 1
+                        A.add(pos); // add the position to the end
+                        pos++; // increment the pos
+                        hash.put(string, A);
+                    }
+                }
             }
+            System.out.println(hash);
+        } catch (FileNotFoundException e) {
+            System.out.println("An error occurred.");
+            e.printStackTrace();
         }
-        return hash ; 
+
     }
    ////////////////////////////////
     public static void setindexes(MongoCollection<Document> col)
