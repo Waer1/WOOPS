@@ -275,7 +275,7 @@ public class Indexer {
 	
 	/////////////////
 
-    public static ArrayList<String> filter() {
+	public static ArrayList<String> filter(String path) {
         ArrayList<String> Words = new ArrayList<String>();
         try {
             // here we should put the path of the file from which we read the input
@@ -309,7 +309,6 @@ public class Indexer {
     public static void FileOrgan() {
         // -------------------------------------------------------
         // Load file into list
-        ArrayList<String> Words = filter();
         try {
             // here we put the path of the folder which contains file pathes
             File file = new File("C:/Users/20115/Dropbox/My PC (LAPTOP-ILAL93NC)/Desktop/FilePathes.txt");
