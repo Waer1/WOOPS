@@ -12,6 +12,8 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.Indexes;
 
 import ca.rmen.porterstemmer.PorterStemmer;
 
@@ -19,11 +21,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.lang.UnknownError;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Scanner;
-import java.util.StringTokenizer;
-
 import java.util.*; 
 
 @SuppressWarnings("deprecation")
@@ -74,15 +71,25 @@ public class Indexer {
 		//------------------------------------------------------------------
 		
 		// remove metadata & punctuation
+		
+		
+		//
 		ArrayList<String> string_array=  Remove_tags(doc);
 		// remove stop words from file
+		// array of strings
+		
 		string_array = Remove_Stop_Words(string_array);
 		System.out.println("------------------------------------");
+		
 		for(int i=0;i<string_array.size();i++)
 		{
 			//System.out.println(string_array.get(i));
 		}
 		string_array = Stemming(string_array);
+		
+		//Map<String, ArrayList<Integer>> hashtable = FileOrgan();
+		//ArrayList<Document> listofdocs = createdocuments(hashtable,1);
+
 		
 		//---------------------------------------------------------------
 		
@@ -104,7 +111,7 @@ public class Indexer {
 //		
 //		//---------------------------------------------------------------
 //
-//		//Document doc1 = new Document("ahmed","sabry");
+//		Document doc1 = new Document("ahmed","sabry");
 //		FindIterable<Document> iterDoc = col.find();
 //		Iterator it = iterDoc.iterator();
 ////		while(it.hasNext())
@@ -136,16 +143,17 @@ public class Indexer {
 	
 	public static  MongoDatabase get_database(String databasename) {
 
-		MongoClient mongoClient2 =  MongoClients.create("mongodb://localhost:27017");
-		MongoDatabase db = mongoClient2.getDatabase(databasename);	
-		return db;
+		//MongoClient mongoClient2 =  MongoClients.create("mongodb://localhost:27017");
+		//MongoDatabase db = mongoClient2.getDatabase(databasename);	
+		//return db;
 		
-		//		ConnectionString connectionString = new ConnectionString("mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
-		//		MongoClientSettings settings = MongoClientSettings.builder()
-		//        	.applyConnectionString(connectionString)
-		//        	.build();
-		//		MongoClient mongoClient = MongoClients.create(settings);
-		//		MongoDatabase database = mongoClient.getDatabase("test");
+				ConnectionString connectionString = new ConnectionString("mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
+				MongoClientSettings settings = MongoClientSettings.builder()
+		        	.applyConnectionString(connectionString)
+		        	.build();
+				MongoClient mongoClient = MongoClients.create(settings);
+				MongoDatabase database = mongoClient.getDatabase("test");
+		      return database
 	}
 	
 	// function get collection from database 
@@ -160,17 +168,22 @@ public class Indexer {
 	public static ArrayList<String> Remove_tags(org.jsoup.nodes.Document doc)
 	{
 		String s1 =  doc.toString();
+		String s2 =  doc.toString();
+		//s2 +="احمد ثبري";
+		//s1 +="احمد ثبري";
 		//---------------------------------------------------------------
 		
 		// remove rags
 		s1 = Jsoup.clean(s1, Whitelist.none());
-		
+		//s2 = Jsoup.clean(s2, Whitelist.none());
 		//----------------------------------------------------------------
 		// remove all characters except English alphabets & numbers
 		// Note : should ask Eng. Ali about removing those characters
 		//s1 = s1.replace(".", " ");
 		//s1 = s1.replaceAll("\\p{Punct}", " ");
-		s1 = s1.replaceAll("[^a-zA-Z0-9]", " ");
+		//s2 = s2.replaceAll("[^a-zA-Z0-9]", " ");
+		s1 = s1.replaceAll("[^\\p{InArabic}\\s]", " ");
+		//s1 += s2;
 		//s1 = s1.replaceAll("[^a-zA-Z]", " ");
 		//-----------------------------------------------------------------
 		// test code here
@@ -248,6 +261,10 @@ public class Indexer {
 			if(!temp.equals(string_array.get(i)))
 			{
 				System.out.println(temp+"-"+string_array.get(i));
+				if(string_array.get(i).equals("احمد"))
+				{
+					break;
+				}
 			}
 		}
 		
@@ -262,7 +279,7 @@ public class Indexer {
         ArrayList<String> Words = new ArrayList<String>();
         try {
             // here we should put the path of the file from which we read the input
-            File myObj = new File("C:/Users/20115/Dropbox/My PC (LAPTOP-ILAL93NC)/Desktop/text.txt");
+            File myObj = new File(".\\test.txt");
             Scanner myReader = new Scanner(myObj);
             while (myReader.hasNextLine()) {
                 String data = myReader.nextLine();
@@ -316,4 +333,47 @@ public class Indexer {
         return hash ; 
     }
    ////////////////////////////////
+    public static void setindexes(MongoCollection<Document> col)
+    {
+    	//col.drop();
+		IndexOptions indexOptions = new IndexOptions().unique(true);
+		String resultCreateIndex = col.createIndex(Indexes.ascending("Word", "DOC_ID"),indexOptions);
+		System.out.println(String.format("Index created: %s", resultCreateIndex));
+    }
+    public static ArrayList<Document> createdocuments(Map<String, ArrayList<Integer>> inverteddocs,int doc_id)
+	{
+		ArrayList<Document> listofdocs = new ArrayList<Document>();
+		
+		for (String i : inverteddocs.keySet()) 
+		{
+			ArrayList<Integer> arr  =  inverteddocs.get(i);
+			Document doc1 = new Document("Word",i);
+			doc1.append("DOC_ID", doc_id);
+			doc1.append("TF", arr.get(0));
+			doc1.append("IDF", arr.get(1));
+			arr.remove(0);
+			arr.remove(0);
+			doc1.append("POSITION", arr);
+			listofdocs.add(doc1);
+			System.out.println("key: " + i + " value: " + inverteddocs.get(i));
+		}
+
+
+		//listofdocs.add(document1);
+		//listofdocs.add(document2);
+		
+		return listofdocs;
+	}
+	public static void insertdocs(MongoCollection<Document> col,ArrayList<Document> listofdocs )
+	{
+		try
+		{
+			col.insertMany(listofdocs);	
+		}
+		catch(Exception e)
+		{
+			System.out.println(e);
+		}
+	}
+
 }
