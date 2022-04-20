@@ -12,6 +12,7 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 
@@ -19,6 +20,7 @@ import ca.rmen.porterstemmer.PorterStemmer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.lang.UnknownError;
 import java.net.UnknownHostException;
 import java.util.*; 
@@ -26,6 +28,7 @@ import java.util.*;
 @SuppressWarnings("deprecation")
 public class Indexer {
 	
+	final static String indexer_database_connection = "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 	public static void FileOrganizer()
 	{
 		Map <String, Vector<Integer>> hash = new HashMap<>();
@@ -74,7 +77,8 @@ public class Indexer {
 		
 		
 		//
-		ArrayList<String> string_array=  Remove_tags(doc);
+		String s1 =  doc.toString();
+		ArrayList<String> string_array=  Remove_tags(s1);
 		// remove stop words from file
 		// array of strings
 		
@@ -91,68 +95,116 @@ public class Indexer {
 		//ArrayList<Document> listofdocs = createdocuments(hashtable,1);
 
 		
-		//---------------------------------------------------------------
+	}
+	
+	
+	public static void run_indexer()
+	{
+		//------------------------------ get database of links & documents
 		
-//      // Code Below is for connecting & testing database		
-//				
-//		//---------------------------------------------------------------
-//		
-//		// get connection with database server. should pass: Database Name in String
-//		MongoDatabase db = get_database("train");
-//		
-//		//---------------------------------------------------------------
-//		
-//		// get collection from database , should send db & Collection Name String
-//		MongoCollection<Document> col = get_collection(db, "ahmed");
-//		
-//		//---------------------------------------------------------------
-//		
-//		
-//		
-//		//---------------------------------------------------------------
-//
-//		Document doc1 = new Document("ahmed","sabry");
-//		FindIterable<Document> iterDoc = col.find();
-//		Iterator it = iterDoc.iterator();
-////		while(it.hasNext())
-////		{
-////			
-////			System.out.println(it.next());
-////		}
-//		String s1 = it.next().toString();
-//		Document doc2 = iterDoc.first();
-//		//doc2 = iterDoc.;
-//		System.out.println(doc2.toString());
-//		
-//		System.out.println(s1);
-//		//col.insertOne(doc1);
-//		System.out.println("bye");
-//		try
-//		{
-//			col.insertOne(doc2);
-//		}
-//		catch(Exception e)
-//		{
-//			System.out.println("Error in index ");
-//		}
+		//MongoDatabase Crawler_database = get_database(,);
+		//------------------------------ get collection of documents & size
+		
+		
+		//------------------------------- loop on documents
+		
+		int size_Docs = 1;
+		for(int i=0;i<size_Docs;i++)
+		{
+			// retrieve document
+			org.jsoup.nodes.Document doc = null;
+			try {
+				doc = Jsoup.connect("https://en.wikipedia.org/").get();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			//MongoDatabase Indexer_database = get_database("Search_index",indexer_database_connection);
+			//MongoCollection<Document> col =  get_collection(Indexer_database,"invertedfile");
+			
+			// check if document needed to be indexed or not from crawler
+			
+			//delete_doc_ID(col,url,0);
+			
+			// filter documents
+			String s1 =  doc.toString();
+			ArrayList<String> string_array=  Remove_tags(s1);
+			String title = doc.select("head").text();
+			String headers = doc.select("h1").text();
+			headers +=" "+ doc.select("h2").text();
+			headers +=" "+ doc.select("h3").text();
+			headers +=" "+ doc.select("h4").text();
+			headers +=" "+ doc.select("h5").text();
+			headers +=" "+ doc.select("h6").text();
+			//String paragraphs = doc.select("p").text();
+			
+			ArrayList<String> headers_array = Remove_tags(headers);
+			ArrayList<String> title_array = Remove_tags(title);
+			//ArrayList<String> paragraphs_array = Remove_tags(paragraphs);
+			
+			// remove stop words from file
+			// array of strings
+			string_array = Remove_Stop_Words(string_array);
+			headers_array = Remove_Stop_Words(headers_array);
+			title_array = Remove_Stop_Words(title_array);
+			//paragraphs_array = Remove_Stop_Words(paragraphs_array);
+			System.out.println("------------------------------------");
+			
+			for(int j=0;j<string_array.size();j++)
+			{
+				//System.out.println(string_array.get(j));
+			}
+			string_array = Stemming(string_array);
+			headers_array = Stemming(headers_array);
+			title_array = Stemming(title_array);
+			//paragraphs_array = Stemming(paragraphs_array);
+			
+
+			
+			
+			
+			Map<String, Integer> hash_headers = new HashMap<String, Integer> ();
+			Map<String, Integer> hash_title = new HashMap<String, Integer> ();
+			//Map<String, Integer> hash_paragraphs = new HashMap<String, Integer> ();
+			hash_headers = hashtags(hash_headers,headers_array);
+			hash_title = hashtags(hash_title,title_array);
+			//hash_paragraphs = hashtags(hash_paragraphs,paragraphs_array);
+
+			//Map<String, ArrayList<Integer>> hashtable = FileOrgan();
+			//ArrayList<Document> listofdocs = createdocuments(hashtable,2,hash_title,hash_headers);
+
+			try
+			{
+				//col.insertMany(listofdocs);
+				//delete_doc_ID(col,"",2);
+			}
+			catch(Exception e)
+			{
+				System.out.println(e);
+			}
+			
+			
+		}
+		
 		
 	}
 	
 	// function get database from mongodb server 
 	// Note should be modified when connect to atlas
 	
-	public static  MongoDatabase get_database(String databasename) {
+	public static  MongoDatabase get_database(String databasename,String connection) {
 
 		//MongoClient mongoClient2 =  MongoClients.create("mongodb://localhost:27017");
 		//MongoDatabase db = mongoClient2.getDatabase(databasename);	
 		//return db;
 		
-				ConnectionString connectionString = new ConnectionString("mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
+				ConnectionString connectionString = new ConnectionString(connection);
 				MongoClientSettings settings = MongoClientSettings.builder()
 		        	.applyConnectionString(connectionString)
 		        	.build();
 				MongoClient mongoClient = MongoClients.create(settings);
-				MongoDatabase database = mongoClient.getDatabase("test");
+				MongoDatabase database = mongoClient.getDatabase(databasename);
 		      return database;
 	}
 	
@@ -165,15 +217,14 @@ public class Indexer {
 	}
 	
 	// Function to clean up the documents
-	public static ArrayList<String> Remove_tags(org.jsoup.nodes.Document doc)
+	public static ArrayList<String> Remove_tags(String s1)
 	{
-		String s1 =  doc.toString();
-		String s2 =  doc.toString();
+		
 		//s2 +="احمد ثبري";
 		//s1 +="احمد ثبري";
 		//---------------------------------------------------------------
 		
-		// remove rags
+		// remove tags
 		s1 = Jsoup.clean(s1, Whitelist.none());
 		//s2 = Jsoup.clean(s2, Whitelist.none());
 		//----------------------------------------------------------------
@@ -181,8 +232,8 @@ public class Indexer {
 		// Note : should ask Eng. Ali about removing those characters
 		//s1 = s1.replace(".", " ");
 		//s1 = s1.replaceAll("\\p{Punct}", " ");
-		//s2 = s2.replaceAll("[^a-zA-Z0-9]", " ");
-		s1 = s1.replaceAll("[^\\p{InArabic}\\s]", " ");
+		s1 = s1.replaceAll("[^a-zA-Z0-9]", " ");
+		//s1 = s1.replaceAll("[^\\p{InArabic}\\s]", " ");
 		//s1 += s2;
 		//s1 = s1.replaceAll("[^a-zA-Z]", " ");
 		//-----------------------------------------------------------------
@@ -250,6 +301,7 @@ public class Indexer {
 		return str;
 		
 	}
+	// stemming words using port stemmer library
 	public static ArrayList<String> Stemming(ArrayList<String> string_array)
 	{
 		PorterStemmer stemmer = new PorterStemmer();
@@ -260,11 +312,11 @@ public class Indexer {
 			string_array.set(i,stemmer.stemWord(string_array.get(i)));
 			if(!temp.equals(string_array.get(i)))
 			{
-				System.out.println(temp+"-"+string_array.get(i));
-				if(string_array.get(i).equals("احمد"))
-				{
-					break;
-				}
+				System.out.println(temp+"-"+string_array.get(i)); // print stemmed word & word
+//				if(string_array.get(i).equals("احمد"))
+//				{
+//					break;
+//				}
 			}
 		}
 		
@@ -347,6 +399,7 @@ public class Indexer {
 
     }
    ////////////////////////////////
+    // create indexes on "WORD" & "DOC_ID" -> like composite key & ascending order
     public static void setindexes(MongoCollection<Document> col)
     {
     	//col.drop();
@@ -354,7 +407,10 @@ public class Indexer {
 		String resultCreateIndex = col.createIndex(Indexes.ascending("Word", "DOC_ID"),indexOptions);
 		System.out.println(String.format("Index created: %s", resultCreateIndex));
     }
-    public static ArrayList<Document> createdocuments(Map<String, ArrayList<Integer>> inverteddocs,int doc_id)
+    
+    // convert from hashmap to document to be stored in database
+    public static ArrayList<Document> createdocuments(Map<String, ArrayList<Integer>> inverteddocs
+    		,int doc_id,Map<String, Integer> hash_title ,Map<String, Integer> hash_headers )
 	{
 		ArrayList<Document> listofdocs = new ArrayList<Document>();
 		
@@ -368,6 +424,19 @@ public class Indexer {
 			arr.remove(0);
 			arr.remove(0);
 			doc1.append("POSITION", arr);
+			int no_headers =0;
+			if(hash_headers.get(i) != null)
+			{
+				no_headers = hash_headers.get(i);
+			}
+			int no_titles =0;
+			if(hash_title.get(i) != null)
+			{
+				no_titles = hash_title.get(i);
+			}
+			doc1.append("Headers", no_headers);
+			doc1.append("Title",no_titles );
+			doc1.append("Other", arr.size()-no_headers-no_titles);
 			listofdocs.add(doc1);
 			System.out.println("key: " + i + " value: " + inverteddocs.get(i));
 		}
@@ -378,6 +447,8 @@ public class Indexer {
 		
 		return listofdocs;
 	}
+    
+    // insert array of documents that belong to template(document1)
 	public static void insertdocs(MongoCollection<Document> col,ArrayList<Document> listofdocs )
 	{
 		try
@@ -386,8 +457,87 @@ public class Indexer {
 		}
 		catch(Exception e)
 		{
+			System.out.println("Handled Expection");
 			System.out.println(e);
 		}
 	}
+	// delete updated document in crawler from search_index to insert new one
+    public static void delete_doc_ID(MongoCollection<Document> col,String url,int doc_id)
+    {
+    	//col.deleteMany(Filters.eq("DOC_ID",doc_id));
+    	col.deleteMany(Filters.eq("DOC_ID",url));
+    }
+	public static  Map<String,Integer> hashtags (Map<String, Integer> MetaData,ArrayList<String> arr )
+	{
+		for(int i = 0;i<arr.size();i++)
+		{
+			if(MetaData.get(arr.get(i)) == null)
+			{
+				MetaData.put(arr.get(i), 1);
+			}
+			else
+			{
+				int x = MetaData.get(arr.get(i));
+				x++;
+				MetaData.put(arr.get(i), x);
+			}
+
+		}
+		return MetaData;
+		
+	}
 
 }
+
+
+
+
+
+
+
+
+
+//---------------------------------------------------------------
+
+//// Code Below is for connecting & testing database		
+//		
+////---------------------------------------------------------------
+//
+//// get connection with database server. should pass: Database Name in String
+//MongoDatabase db = get_database("train");
+//
+////---------------------------------------------------------------
+//
+//// get collection from database , should send db & Collection Name String
+//MongoCollection<Document> col = get_collection(db, "ahmed");
+//
+////---------------------------------------------------------------
+//
+//
+//
+////---------------------------------------------------------------
+//
+//Document doc1 = new Document("ahmed","sabry");
+//FindIterable<Document> iterDoc = col.find();
+//Iterator it = iterDoc.iterator();
+////while(it.hasNext())
+////{
+////	
+////	System.out.println(it.next());
+////}
+//String s1 = it.next().toString();
+//Document doc2 = iterDoc.first();
+////doc2 = iterDoc.;
+//System.out.println(doc2.toString());
+//
+//System.out.println(s1);
+////col.insertOne(doc1);
+//System.out.println("bye");
+//try
+//{
+//	col.insertOne(doc2);
+//}
+//catch(Exception e)
+//{
+//	System.out.println("Error in index ");
+//}
