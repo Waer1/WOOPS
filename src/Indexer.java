@@ -29,6 +29,7 @@ import java.util.*;
 public class Indexer {
 	
 	final static String indexer_database_connection = "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+	
 	public static void FileOrganizer()
 	{
 		Map <String, Vector<Integer>> hash = new HashMap<>();
@@ -128,9 +129,10 @@ public class Indexer {
 			//delete_doc_ID(col,url,0);
 			
 			// filter documents
+			// detect tags for ranker 
 			String s1 =  doc.toString();
 			ArrayList<String> string_array=  Remove_tags(s1);
-			String title = doc.select("head").text();
+			String title = doc.select("title").text();
 			String headers = doc.select("h1").text();
 			headers +=" "+ doc.select("h2").text();
 			headers +=" "+ doc.select("h3").text();
