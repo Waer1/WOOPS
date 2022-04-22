@@ -62,6 +62,10 @@ public class Indexer {
 		//---------------------------------------------------------------
 		// step: 0
 		// try getting a document from jsoup for testing until crawler is ready
+		
+		//-----------------------------uncomment------------------------------
+		//MongoDatabase db = get_database("test",indexer_database_connection);
+		//MongoCollection<Document> col = get_collection(db, "ahmed");
 		org.jsoup.nodes.Document doc = null;
 		try
 		{
@@ -92,9 +96,10 @@ public class Indexer {
 		}
 		string_array = Stemming(string_array);
 		
+		//-----------------------------uncomment------------------------------
 		//Map<String, ArrayList<Integer>> hashtable = FileOrgan();
 		//ArrayList<Document> listofdocs = createdocuments(hashtable,1);
-
+		//col.insertMany(listofdocs);
 		
 	}
 	
@@ -378,6 +383,7 @@ public class Indexer {
                         hash.get(string).set(0, (Integer) hash.get(string).get(0) + 1); // increment the tf
                         hash.get(string).add(pos); // add the position to the end of the list
                         pos++; // increment the position
+                        
                         if (!found) // if this is a new document
                         {
                             hash.get(string).set(1, hash.get(string).get(1) + 1); // increment DF
