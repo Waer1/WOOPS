@@ -122,11 +122,11 @@ public class Indexer {
 
 		// ------------------------------- loop on documents
 
-		MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-		MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
-		//MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
+		//MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
+		//MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
+		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
 		MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
-		setindexes(indexercol);
+		//setindexes(indexercol);
 		boolean stop_indexeing = false;
 		for (int i = 0; i < size_Docs; i++) {
 			// retrieve document
