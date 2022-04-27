@@ -48,9 +48,21 @@ public class QueryProcessor {
 				while(it.hasNext())
 				{
 					Document doc = it.next();
-					ArrayList<Document> list = DocLists.get(string_array.get(i));
-					list.add(doc);
-					DocLists.put(string_array.get(i), list);
+//					ArrayList<Document> list = DocLists.get(string_array.get(i));
+//					list.add(doc);
+//					DocLists.put(string_array.get(i), list);
+					if(DocLists.get(string_array.get(i)) == null)
+					{
+						ArrayList<org.bson.Document> list = new ArrayList<org.bson.Document>();
+						list.add(doc);
+						DocLists.put(string_array.get(i), list);
+					}
+					else
+					{
+						ArrayList<org.bson.Document> list = DocLists.get(string_array.get(i));
+						list.add(doc);
+						DocLists.put(string_array.get(i), list);
+					}
 				}
 			}
 			
