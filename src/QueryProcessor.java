@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import org.bson.Document;
 
@@ -36,7 +37,8 @@ public class QueryProcessor {
 		
 		//FindIterable<Document> iterDoc = indexercol.find(Filters.eq("Word",""));
 		
-		HashMap<String,ArrayList<Document>> DocLists = new HashMap<String,ArrayList<Document>>();
+		//HashMap<String,ArrayList<Document>> DocLists = new HashMap<String,ArrayList<Document>>();
+		HashMap<String,ArrayList<Document>> DocLists = new LinkedHashMap<String,ArrayList<Document>>();
 		for(int i=0;i<string_array.size();i++)
 		{
 			if(!DocLists.containsKey(string_array.get(i)))
@@ -67,6 +69,7 @@ public class QueryProcessor {
 			}
 			
 		}
+		
 		number_documents = Indexer.countUniqueDoc(indexercol);
 		return DocLists;
 	}
