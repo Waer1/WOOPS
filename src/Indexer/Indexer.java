@@ -1,17 +1,12 @@
 package Indexer;
 
 import Crawler.Crawler;
-import Crawler.mongoHandler;
 import org.bson.Document;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
 import org.jsoup.safety.Whitelist;
-import org.jsoup.select.Elements;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoClientURI;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;

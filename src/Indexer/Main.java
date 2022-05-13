@@ -1,9 +1,8 @@
 package Indexer;
 
-import Crawler.mongoHandler;
+import Crawler.CrawlerMain;
 
 public class Main {
-    mongoHandler mym = new mongoHandler();
-
+    CrawlerMain mym = new CrawlerMain();
 
 }
