@@ -6,12 +6,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Whitelist;
@@ -19,6 +22,7 @@ import org.jsoup.select.Evaluator.ContainsText;
 import org.jsoup.select.Selector;
 //import org.springframework.data.mongodb.core.mapping.Document;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,140 +48,224 @@ public class HomeController {
 	static ArrayList<Document> docs;
 	private static ArrayList<Double> tf_idf = new ArrayList<Double>();
 	private static HashMap<String,Double>out = new HashMap<String,Double>();
+	private static ArrayList<String> urls = new ArrayList<String>(); ;
 	private static int TotalPages = 1000;
+	private static int no_urls;
+	private static ArrayList<String> Copy_String_list = new ArrayList<String>();
+	private static String last_query = new String();
 	//public static int number_documents;
 //	@RequestMapping(value="/")
 //	public String greeting()
 //	{
 //		return "index.html";
 //	}
-	@RequestMapping(value="/page/")
+	@RequestMapping(value="/mainpage/")
 	public String mainpage()
 	{
 		return  "index.html";
 	}
-//	@GetMapping(value="/{name}")
-//	public String greetingwithname(@PathVariable String name)
-//	{
-//		//MongoDatabase db
-//		//MongoCollection<Document> col;
-//		return "Helloooo "+name;
-//	}
-//	@GetMapping(value="/test/{query}")
-//	public ArrayList<String> test(@PathVariable String query)
-//	{
-//		ArrayList<String> string_array = Remove_tags(query);
-//		string_array = Remove_Stop_Words(string_array);
-//		string_array = Stemming(string_array);
-//		System.out.println("no Error sabry");
-//		return string_array;
-//	}
+	public static void clear()
+	{
+		for(int i=Copy_String_list.size();i>0;i--)
+		{
+			System.out.println("removed");
+			Copy_String_list.remove(i-1);
+		}
+		for(int i=urls.size();i>0;i--)
+		{
+			urls.remove(i-1);
+		}
+//		for(int i=Copy_String_list.size();i<Copy_String_list.size();i--)
+//		{
+//			Copy_String_list.remove(0);
+//		}
+	}
+	// suggestion backend for interface
+	@GetMapping(value="/suggestion/{query}")
+	public ArrayList<String> test(@PathVariable String query)
+	{
+		// get connection with queries database
+		ArrayList<String> suggestion_array = new ArrayList<String>();
+		MongoDatabase SUGGESTION_DB = Indexer.get_database("SUGGESTION",Indexer.crawler_database_connection);
+		MongoCollection<Document> SUGGESTION_COL = Indexer.get_collection(SUGGESTION_DB, "SUGGESTION_COL");
+		
+		// search for query using substring to return previous submitted queries
+		Pattern pattern = Pattern.compile(query, Pattern.CASE_INSENSITIVE);
+		Bson filter = Filters.regex("_id", pattern);
+		FindIterable<Document> iterDoc = SUGGESTION_COL.find(filter);
+		MongoCursor<Document> it = iterDoc.iterator();
+		int counter =0;
+		while(it.hasNext())
+		{
+			counter++;
+			Document suggestion_query = it.next();
+			String temp_query = suggestion_query.getString("_id"); 
+			suggestion_array.add(temp_query);
+			System.out.println("Query "+counter+" : "+temp_query);
+			System.out.println("Suggestion Queries Found "+counter);
+		}
+		return suggestion_array;
+	}
+	
+	// handle user query
 	@GetMapping(value="/data/{query}")
 	public ArrayList<Document> DatabaseResponse(@PathVariable String query)
 	{
-		String Copy_query = new String (query);
-		ArrayList<String> Copy_String_list= copy(Copy_query);
-		ArrayList<String> urls = new ArrayList<String>();
-		//urls.add("https://en.wikipedia.org/");
-		//urls.add("https://en.wikipedia.org/");
-		//HashMap<String,ArrayList<Document>> ReterivedDocuments = Query_Process (query,urls);
-		ReterivedDocuments = Query_Process (query,urls);
+		
+		// check if query is submitted before or not 
+		last_query = query;
+		ArrayList<String> suggestion_array = new ArrayList<String>();
+		MongoDatabase SUGGESTION_DB = Indexer.get_database("SUGGESTION",Indexer.crawler_database_connection);
+		MongoCollection<Document> SUGGESTION_COL = Indexer.get_collection(SUGGESTION_DB, "SUGGESTION_COL");
+		
+		// search for query using substring to return previous submitted queries
+		try
+		{
+			Document doc=  new Document("_id",query);
+			SUGGESTION_COL.insertOne(doc);
+		}
+		catch(Exception e)
+		{
+			System.out.println("Query already in database");
+		}
+		
+		// check if query is submitted before or not 
+		clear();
 		ArrayList<Document> JSON_Data = new ArrayList<Document>();
-		// call phrase search
+		String Copy_query = new String (query);
+		//Copy_String_list= copy(Copy_query);
+		copy(Copy_query);
+		//urls = new ArrayList<String>();
+		ReterivedDocuments = Query_Process (query,urls);
+		System.out.println("no errors before phrase search");
+		if(ReterivedDocuments == null)
+		{
+			JSON_Data.add(new Document("SIZE",no_urls));
+			return JSON_Data;
+		}
+		else
+		{
+			System.out.println(ReterivedDocuments.size());
+		}
+			
+		// call phrase search----------------------------------------------------------------------
+		ArrayList<String> phrase_urls = new ArrayList<String>();
+		long start_phrase = System.currentTimeMillis();
+		if(Copy_String_list.size() > 4)
+		{
+			System.out.println("Size words = "+Copy_String_list.size());
+			phrase_urls = phraseSearch(ReterivedDocuments);
+		}
+		long end_phrase = System.currentTimeMillis();
+		System.out.println("Time of phrase search = "+(end_phrase-start_phrase));
 		
-		
-		
-		// call ranker 
+		// call ranker ----------------------------------------------------------------------------
 		long start_ranker = System.currentTimeMillis();
-		urls = TF_IDF();
+		ArrayList<String> ranker_urls = TF_IDF();
 		long end_ranker = System.currentTimeMillis();
 		System.out.println("Time of ranker = "+(end_ranker-start_ranker));
-		
-		
-		
-		
-		// merge urls
-		
+		// merge urls--------------------------------------------------------------------------------
+		HashMap<String, Integer> temphash = new HashMap<String,Integer>();
+		for(int i=0;i<phrase_urls.size();i++)
+		{
+			urls.add(phrase_urls.get(i));
+			temphash.put(phrase_urls.get(i), 1);
+		}
+		for(int i=0;i<ranker_urls.size();i++)
+		{
+			if(temphash.get(ranker_urls.get(i))  == null)
+			{
+				urls.add(ranker_urls.get(i));
+				temphash.put(ranker_urls.get(i), 1);
+			}
+		}
 		
 		// get  title and description for each document ------ get from database or parse .
 		// we have array list of urls(strings)
-
-		
-		int no_urls = urls.size();
+		no_urls = urls.size();
+		System.out.println("Number of urls send to front = "+no_urls);
+		JSON_Data.add(new Document("SIZE",no_urls));
 		System.out.println("urls retreived = "+no_urls);
-		if(no_urls>20)
+		int count_urls =0;
+		if(no_urls>10)
 		{
-			no_urls = 20;
+			count_urls =10;
+		}
+		else
+		{
+			count_urls =no_urls;
 		}
 		long start = System.currentTimeMillis();
 		// some time passes
 		
-		for(int i =0;i<no_urls;i++)
+		for(int i =0;i<count_urls;i++)
 		{
 			long start_1 = System.currentTimeMillis();
 			// get data of url
 			long start_jsoup = System.currentTimeMillis();
-			org.jsoup.nodes.Document doc = null;
-			boolean continue_execution = true;
-			try {
-				doc = Jsoup.connect(urls.get(i)).get();
-	
-			} catch (Exception e) {
-				System.out.println("Error in connection ");
-				continue_execution = false;
-			}
+			String html_string = get_html(urls.get(i));
+			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
 			long end_jsoup = System.currentTimeMillis();
-			System.out.println("Time of jsoup = "+(end_jsoup-start_jsoup));
-			//String temp = doc.select("*").toString();
-			//temp = Jsoup.clean(temp, Whitelist.none());
-			//System.out.println(temp);
-			// get document title
-			if(!continue_execution)
-			{
-				continue;
-			}
-			String TITLE = doc.select("title").toString();
+			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
+			String TITLE = htmldoc.select("title").toString();
 			
 			
 			TITLE = Jsoup.clean(TITLE, Whitelist.none());
 
 			// get description 
 			String description = "no description";
-			for(int j =0;j<Copy_String_list.size();j++)
+			html_string = Jsoup.clean(html_string, Whitelist.none());
+			int indexof_phrase = html_string.indexOf(query);
+			if(indexof_phrase !=-1)
 			{
-				
-				// check headers & paragraphs
-				if( doc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+				if(indexof_phrase +100 <html_string.length())
 				{
-					description = doc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
+				}
+				else
+				{
+					description = html_string.substring(indexof_phrase);
+				}		
+			}
+			else
+			{	
+				for(int j =0;j<Copy_String_list.size();j++)
+				{
 					
-					break;
-				}
-				else if(doc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-				{
-					description = doc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
-					break;
-				}
-				else if(doc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-				{
-					description = doc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-					break;
-				}
-				else if(doc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-				{
-					description = doc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-					break;
-				}
-				else if(doc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-				{
-					description = doc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-					break;
-				}
-				else if(doc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-				{
-					description = doc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
-					System.out.println("body");
-					break;
+					// check headers & paragraphs
+					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+						
+						break;
+					}
+					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
+						break;
+					}
+					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+						break;
+					}
+					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+						break;
+					}
+					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						String s = new String();
+						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+						break;
+					}
+					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
+						System.out.println("body");
+						break;
+					}
 				}
 			}
 			description = Jsoup.clean(description, Whitelist.none());
@@ -202,44 +290,147 @@ public class HomeController {
 			long end_1 = System.currentTimeMillis();
 			System.out.println("Time of 1 documents = "+(end_1-start_1));
 		}
-		
 		long end = System.currentTimeMillis();
 		long elapsedTime = end - start;
-		System.out.println("Time of 20 documents = "+elapsedTime);
+		System.out.println("Time of "+count_urls+" documents = "+elapsedTime);
 		return JSON_Data;
 	}
-	public ArrayList<String>copy(String query)
+	
+	@GetMapping(value="/page/{page_number}")
+	public ArrayList<Document> Pagination(@PathVariable String page_number)
+	{
+		ArrayList<Document> JSON_Data = new ArrayList<Document>();
+		int page_no = Integer.parseInt(page_number);
+		int start_loop =0,end_loop =0;
+		System.out.println("URLS Size = "+no_urls);
+		if(page_no*10 <= no_urls)
+		{
+			start_loop = (page_no-1)*10;
+			end_loop = page_no*10;
+		}
+	
+		else
+		{
+			start_loop = (page_no-1)*10;
+			end_loop = no_urls;
+		}
+		//String description;
+		for(int i=start_loop ;i<end_loop;i++)
+		{
+			long start_1 = System.currentTimeMillis();
+			// get data of url
+			long start_jsoup = System.currentTimeMillis();
+
+			String html_string = get_html(urls.get(i));
+			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
+			long end_jsoup = System.currentTimeMillis();
+			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
+			// get document title
+			String TITLE = htmldoc.select("title").toString();
+			TITLE = Jsoup.clean(TITLE, Whitelist.none());
+
+			// get description 
+			String description = "no description";
+			html_string = Jsoup.clean(html_string, Whitelist.none());
+			int indexof_phrase = html_string.indexOf(last_query);
+			if(indexof_phrase !=-1)
+			{
+				if(indexof_phrase +100 <html_string.length())
+				{
+					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
+				}
+				else
+				{
+					description = html_string.substring(indexof_phrase);
+				}		
+			}
+			else
+			{	
+				for(int j =0;j<Copy_String_list.size();j++)
+				{
+					//System.out.println("S"+j+Copy_String_list.get(j));
+					// check headers & paragraphs
+					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+						
+						break;
+					}
+					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
+						break;
+					}
+					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+						break;
+					}
+					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+						break;
+					}
+					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+						break;
+					}
+					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+					{
+						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
+						System.out.println("body");
+						break;
+					}
+				}
+			}
+			description = Jsoup.clean(description, Whitelist.none());
+			//description.indexOf(query);
+			
+			Document json_doc  = new Document("URL",urls.get(i));
+			json_doc.append("TITLE",TITLE);
+			if(description.length() > 100)
+			{
+				json_doc.append("DESCRIPTION",description.substring(0, 99));
+			}
+			else
+			{
+				json_doc.append("DESCRIPTION",description);
+			}
+			JSON_Data.add(json_doc);
+			long end_1 = System.currentTimeMillis();
+			System.out.println("Time of 1 documents = "+(end_1-start_1));
+			}
+		return JSON_Data;
+	}
+	
+	// copy query to save it 
+	public void copy(String query)
 	{
 		ArrayList<String> string_array = Indexer.Remove_tags(query);
-		System.out.println("no Error sabry");
+		//System.out.println("no Error sabry");
 		string_array = Indexer.Remove_Stop_Words(string_array);
-		return string_array;	
+		for(int i=0;i<string_array.size();i++)
+		{
+			Copy_String_list.add(string_array.get(i));
+		}
+		//return string_array;	
 	}
+	// retreive query from database 
 	public HashMap<String,ArrayList<Document>> Query_Process (String query,ArrayList<String> urls)
 	{
 		
 		ArrayList<String> string_array = Indexer.Remove_tags(query);
-		//System.out.println("no Error sabry");
 		string_array = Indexer.Remove_Stop_Words(string_array);
-		//System.out.println("no Error sabry");
 		string_array = Indexer.Stemming(string_array);
-		//System.out.println("no Error sabry");
-		// connection with atlas
 		MongoDatabase indexerdb = get_database("Search_index", "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
 		MongoCollection<Document> indexercol = get_collection(indexerdb, "invertedfile");
 		//number_documents = Indexer.countUniqueDoc(indexercol);
 		TotalPages = Indexer.countUniqueDoc(indexercol);
-		
-		// connection with local
-		
-		//MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-		//MongoDatabase indexerdb = mongoClient2.getDatabase("Search_index");
-		//MongoCollection<Document> indexercol = Indexer.get_collection(indexerdb, "invertedfile");
-		
-		//FindIterable<Document> iterDoc = indexercol.find(Filters.eq("Word",""));
-		
+		System.out.println("TotalPages = "+TotalPages);
 		//HashMap<String,ArrayList<Document>> DocLists = new HashMap<String,ArrayList<Document>>();
 		HashMap<String,ArrayList<Document>> DocLists = new LinkedHashMap<String,ArrayList<Document>>();
+		System.out.println(string_array.size());
 		for(int i=0;i<string_array.size();i++)
 		{
 			//System.out.println("no Error sabry");
@@ -273,9 +464,8 @@ public class HomeController {
 						urls.add(doc.getString("DOC_ID"));
 					}
 
-					//System.out.println("no Error sabry");
 				}
-				System.out.println("size document list"+DocLists.get(string_array.get(i)).size());
+				
 			}
 			else
 			{
@@ -340,121 +530,154 @@ public class HomeController {
         }
         return finale;
 	}
+	
+	// phrase search
+	
+public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>myMap){
+		
+		// 34an ana msh 3auzo ye3dl fl trteb
+		HashMap<String , ArrayList<Document>> UrlMap =  new LinkedHashMap<String,ArrayList<Document>>() ; // -> 
+		
+		Iterator<Entry<String , ArrayList<Document>>> myIterator = myMap.entrySet().iterator() ;
+		System.out.println("no errors at start phrase search");
+		//iterating over the main map 
+		while(myIterator.hasNext())
+		{
+			// accessing the element which the iterator points at
+			Map.Entry<String, ArrayList<Document>> newMap = myIterator.next(); 
+			
+			//iterating over its whole documents and storing it in the new hashmap
+			int size = newMap.getValue().size() ; 
+			for(int i = 0 ; i < size ; i ++)
+			{
+				// check if the url exists before in our map 
+				var check = UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")); 
+				if(check != null) // if yes add this document to it
+					UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")).add(newMap.getValue().get(i)); // el document el feha el esm -> ahmed masln
+				else // create new place to it and add the document in the List 
+				{
+					UrlMap.put(newMap.getValue().get(i).getString("DOC_ID"),new ArrayList<Document>()); // create new slot with this URL as a key
+					UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")).add(newMap.getValue().get(i)); // add the document in its array
+				}
+			}			
+		}
+		
+		// to store the positions and work on them 
+		// brdu msh 3auz a3dl fl trteb
+		System.out.println("no errors at middle phrase search");
+		HashMap<String , ArrayList<Integer>> Positions =  new LinkedHashMap<String,ArrayList<Integer>>(); 
+		
+		
+		// iterate over the URLMap
+		myIterator = UrlMap.entrySet().iterator(); 
+		
+		
+		ArrayList<String> URLContainer = new ArrayList<> (); // hya de el ha7ot feha elly l2eto 
+		
+		while (myIterator.hasNext())
+		{
+			Map.Entry<String, ArrayList<Document>> newMap = myIterator.next(); 
+			int size = newMap.getValue().size() ; 
+			if(size== myMap.size()) // if the URL has number of document = number of elements which we search on it  => doc feha ahmed , w doc feha sabry w doc feha abdelhady
+			{
+				// iterating over all elements and store their positions
+				System.out.println("no errors at mid phrase search");
+				for(int i = 0 ; i < size ; i ++)
+				{
+					// ana msh mot2kd mn mwdo3 el casting da bs atmna eno yeshtghl
+					Positions.put(newMap.getValue().get(i).getString("Word"), 
+							(ArrayList<Integer>)newMap.getValue().get(i).getList("POSITION", // h3dy 3la ahmed ageb el positions bta3tha w a3dy 3la sabry ageb el positions w keda
+									Integer.class));					
+				}
+				
+				System.out.println("no errors at mid phrase search");
+				Iterator<Entry<String , ArrayList<Integer>>> IT = Positions.entrySet().iterator() ;
+				Map.Entry<String, ArrayList<Integer>> FirstName = IT.next(); 
+				
+				// hena b5ly shoghly dayman 3la awl kelma fl searching  w bdwr 3ala el sequance menha baa
+				for(int m = 0; m < size ; m++) {
+					if(compare (size , FirstName.getValue().get(m) , IT, 2)) // el lvlIndc = 2 34an lw el size = 4 ab2a akny shaghal 1 based fa na habd2 mn level 2
+						{
+							// check for at least 1 lw l2et 
+							// add the URl to the founded
+							URLContainer.add(newMap.getKey());
+							break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
+						}
+				}
+				//System.out.println("no errors at mid phrase search");
+			}
+		}
+		System.out.println("no errors at end phrase search");
+		return URLContainer; 
+	}
+	
+	public static Boolean compare (int size , Integer number , Iterator<Entry<String , ArrayList<Integer>>> IT, int LvlInd)
+	{
+		// base case 
+		if(LvlInd == size) { // last level 34an ana shghal 1 based
+			Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
+			for(int i = 0 ; i < FirstRow.getValue().size(); i++)
+			{
+				if(FirstRow.getValue().get(i) == number + 1 )
+					return true ; // found the last index 
+				else if (FirstRow.getValue().get(i) > number ) return false ; 
+			}
+			return false ;
+		}
+		
+		// found the sequence 
+		Boolean found = false ;
+		
+		Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
+		for(int i = 0 ; i < FirstRow.getValue().size(); i++)
+		{
+			if(FirstRow.getValue().get(i) == number + 1 )
+			{
+				// ana msh 3arf 7war el hasnext de hya el bt5ly el iterator yet7rk wla a lw hya fa yeb2a keda el shoghl tmaam
+				IT.hasNext();
+				found = compare(size , number + 1 , IT,LvlInd + 1) ; // found the last index 
+			}
+			else if (FirstRow.getValue().get(i) > number ) return false ; 
+			
+			if(found == true) return true;
+		}
+		
+
+		
+		return found;
+	}
+
 	public MongoDatabase get_database(String databasename, String connection) {
 
-//		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-//		 MongoDatabase db = mongoClient2.getDatabase(databasename);
-//		 return db;
-
-		ConnectionString connectionString = new ConnectionString(connection);
-		MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connectionString).build();
-		MongoClient mongoClient = MongoClients.create(settings);
-		MongoDatabase database = mongoClient.getDatabase(databasename);
-		return database;
+		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
+		 MongoDatabase db = mongoClient2.getDatabase(databasename);
+		 return db;
 	}
 
 	// function get collection from database
-
 	public  MongoCollection<Document> get_collection(MongoDatabase db, String Collection_Name) {
 
 		MongoCollection<Document> col = db.getCollection(Collection_Name);
 		return col;
 	}
-//	public static ArrayList<String> Remove_tags(String s1) {
-//
-//		// s2 +="احمد ثبري";
-//		// s1 +="احمد ثبري";
-//		// ---------------------------------------------------------------
-//
-//		// remove tags
-//		s1 = Jsoup.clean(s1, Whitelist.none());
-//		// s2 = Jsoup.clean(s2, Whitelist.none());
-//		// ----------------------------------------------------------------
-//		// remove all characters except English alphabets & numbers
-//		// Note : should ask Eng. Ali about removing those characters
-//		// s1 = s1.replace(".", " ");
-//		// s1 = s1.replaceAll("\\p{Punct}", " ");
-//		s1 = s1.replaceAll("[^a-zA-Z0-9]", " ");
-//		// s1 = s1.replaceAll("[^\\p{InArabic}\\s]", " ");
-//		// s1 += s2;
-//		// s1 = s1.replaceAll("[^a-zA-Z]", " ");
-//		// -----------------------------------------------------------------
-//		// test code here
-////		String strArray[] = s1.split(" ");
-////		System.out.println(strArray.length);
-////		for(int i=0;i<strArray.length;i++)
-////		{
-////			System.out.println(strArray[i]);
-////
-////		}
-//
-//		// -------------------------------------------------------------------
-//		// split string to array of strings
-//		StringTokenizer str_tokenizer = new StringTokenizer(s1);
-//
-//		ArrayList<String> string_array = new ArrayList<String>(str_tokenizer.countTokens());
-//		// Add tokens to our array
-//
-//		while (str_tokenizer.hasMoreTokens()) {
-//			string_array.add(str_tokenizer.nextToken());
-//		}
-//		// return array of strings
-//		return string_array;
-//	}
-//
-//	// function to remove stop words
-//	public static ArrayList<String> Remove_Stop_Words(ArrayList<String> str) {
-//		// -------------------------------------------------------
-//		// Load file into list
-//		ArrayList<String> stoparr = new ArrayList<String>();
-//		try {
-//			File myObj = new File("stop_words_english.txt");
-//			Scanner myReader = new Scanner(myObj);
-//			while (myReader.hasNextLine()) {
-//				String data = myReader.nextLine();
-//				// System.out.println(data);
-//				stoparr.add(data);
-//			}
-//			myReader.close();
-//		} catch (FileNotFoundException e) {
-//			System.out.println("An error occurred.");
-//			e.printStackTrace();
-//		}
-//		// ----------------------------------------------------------------------
-//		// seocnd remove stop words from String
-//		// string should be filtered from tags & punctuation
-//		int x = str.size();
-//		str.removeAll(stoparr);
-//		// String result = str.stream().collect(Collectors.joining(" "));
-//		// assertEquals(result, target);
-////		for (int i = 0; i < str.size(); i++) {
-////			System.out.println(str.get(i));
-////
-////		}
-////		System.out.println(str.size());
-////		System.out.println(x);
-//		return str;
-//
-//	}
-//
-//	// stemming words using port stemmer library
-//	public static ArrayList<String> Stemming(ArrayList<String> string_array) {
-//		PorterStemmer stemmer = new PorterStemmer();
-//		for (int i = 0; i < string_array.size(); i++) {
-//			String temp = new String(string_array.get(i));
-//
-//			string_array.set(i, stemmer.stemWord(string_array.get(i)));
-////			if (!temp.equals(string_array.get(i))) {
-////				System.out.println(temp + "-" + string_array.get(i)); // print stemmed word & word
-//////				if(string_array.get(i).equals("احمد"))
-//////				{
-//////					break;
-//////				}
-////			}
-//		}
-//
-//		return string_array;
-//	}
-
-
+	
+	// get html string stored in database
+	public static String get_html(String url)
+	{
+		MongoDatabase CrawlerDB = Indexer.get_database("Crawler", null);
+		MongoCollection<Document> CrawlerCol = Indexer.get_collection(CrawlerDB, "Crawler");
+		FindIterable<Document> iterDoc = CrawlerCol.find(Filters.eq("Url",url));
+		MongoCursor<Document> it = iterDoc.iterator();
+		String html_doc ;
+		if(it.hasNext())
+		{
+			Document doc = it.next();
+			html_doc = doc.getString("html");
+		}
+		else
+		{
+			html_doc = "";
+		}
+		return html_doc;
+		}
 }

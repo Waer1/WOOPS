@@ -1,12 +1,10 @@
 import React from "react";
 
 const Show = (props) => {
-  const { results, info } = props;
+  const { results } = props;
   return (
     <div className="show">
-      <div className="show__info">
-        {info ? `Total results: ${info.totalResults}` : ""}
-      </div>
+      
       {results.length > 0
         ? results.map((result) => (
           //{ console.log(result)};
@@ -28,3 +26,9 @@ const Show = (props) => {
 };
 
 export default Show;
+
+/*
+<div className="show__info">
+        //{info ? `Total results: ${info.totalResults}` : ""}
+      </div>
+*/

@@ -120,3 +120,63 @@ body {
   color: #3c4043;
   font-size: 14px;
 }
+
+
+.paginationBttns {
+  width: 80%;
+  height: 40px;
+  border-radius: 10%;
+
+  list-style: none;
+  display: flex;
+  justify-content: center;
+}
+
+.paginationBttns a {
+  padding: 10px;
+  margin: 8px;
+  border-radius: 10%;
+  border: 1px solid #2b2eff;
+  color: #2b2eff;
+  cursor: pointer;
+}
+
+.paginationBttns a:hover {
+  color: white;
+  background-color: #2b2eff;
+}
+
+.paginationActive a {
+  color: white;
+  background-color: #2b2eff;
+}
+
+.dataResult {
+  margin-top: 5px;
+  width: 100%;
+  height: 200px;
+  background-color: white;
+  box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+  overflow: hidden;
+  overflow-y: auto;
+}
+
+.dataResult::-webkit-scrollbar {
+  display: none;
+}
+
+.dataResult .dataItem {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  color: black;
+  cursor: pointer;
+}
+.dataItem:hover{
+  background-color: #9f9f9f;
+}
+
+.dataItem p {
+  margin-left: 10px;
+}
