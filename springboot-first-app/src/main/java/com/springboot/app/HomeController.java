@@ -37,6 +37,9 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.Updates;
+
 import ca.rmen.porterstemmer.PorterStemmer;
 
 @RestController
@@ -68,18 +71,19 @@ public class HomeController {
 	{
 		for(int i=Copy_String_list.size();i>0;i--)
 		{
-			System.out.println("removed");
 			Copy_String_list.remove(i-1);
 		}
 		for(int i=urls.size();i>0;i--)
 		{
 			urls.remove(i-1);
 		}
-//		for(int i=Copy_String_list.size();i<Copy_String_list.size();i--)
-//		{
-//			Copy_String_list.remove(0);
-//		}
+		for(int i=tf_idf.size();i>0;i--)
+		{
+			tf_idf.remove(i-1);
+		}
+		out.clear();
 	}
+
 	// suggestion backend for interface
 	@GetMapping(value="/suggestion/{query}")
 	public ArrayList<String> test(@PathVariable String query)
@@ -92,7 +96,7 @@ public class HomeController {
 		// search for query using substring to return previous submitted queries
 		Pattern pattern = Pattern.compile(query, Pattern.CASE_INSENSITIVE);
 		Bson filter = Filters.regex("_id", pattern);
-		FindIterable<Document> iterDoc = SUGGESTION_COL.find(filter);
+		FindIterable<Document> iterDoc = SUGGESTION_COL.find(filter).sort(Sorts.descending("count"));
 		MongoCursor<Document> it = iterDoc.iterator();
 		int counter =0;
 		while(it.hasNext())
@@ -113,30 +117,46 @@ public class HomeController {
 	{
 		
 		// check if query is submitted before or not 
+		clear();
 		last_query = query;
 		ArrayList<String> suggestion_array = new ArrayList<String>();
 		MongoDatabase SUGGESTION_DB = Indexer.get_database("SUGGESTION",Indexer.crawler_database_connection);
 		MongoCollection<Document> SUGGESTION_COL = Indexer.get_collection(SUGGESTION_DB, "SUGGESTION_COL");
 		
 		// search for query using substring to return previous submitted queries
-		try
+		FindIterable<Document> iterDoc_SUGGESTION = SUGGESTION_COL.find(Filters.eq("_id",query));
+		MongoCursor<Document> it_SUGGESTION = iterDoc_SUGGESTION.iterator();
+		if(it_SUGGESTION.hasNext())
 		{
-			Document doc=  new Document("_id",query);
-			SUGGESTION_COL.insertOne(doc);
+			Document doc = it_SUGGESTION.next();
+			int count_query = doc.getInteger("count");
+			count_query++;
+			SUGGESTION_COL.updateOne(Filters.eq("_id",doc.getString("_id")), Updates.set("count",count_query ));
 		}
-		catch(Exception e)
+		else
 		{
-			System.out.println("Query already in database");
+			try
+			{
+				Document doc=  new Document("_id",query);
+				doc.append("count", 0);
+				SUGGESTION_COL.insertOne(doc);
+			}
+			catch(Exception e)
+			{
+				System.out.println("Query already in database");
+			}	
 		}
 		
+		
 		// check if query is submitted before or not 
-		clear();
+		
 		ArrayList<Document> JSON_Data = new ArrayList<Document>();
 		String Copy_query = new String (query);
 		//Copy_String_list= copy(Copy_query);
 		copy(Copy_query);
 		//urls = new ArrayList<String>();
 		ReterivedDocuments = Query_Process (query,urls);
+		no_urls = urls.size();
 		System.out.println("no errors before phrase search");
 		if(ReterivedDocuments == null)
 		{
@@ -151,7 +171,7 @@ public class HomeController {
 		// call phrase search----------------------------------------------------------------------
 		ArrayList<String> phrase_urls = new ArrayList<String>();
 		long start_phrase = System.currentTimeMillis();
-		if(Copy_String_list.size() > 4)
+		if(Copy_String_list.size() > 1)
 		{
 			System.out.println("Size words = "+Copy_String_list.size());
 			phrase_urls = phraseSearch(ReterivedDocuments);
@@ -496,7 +516,7 @@ public class HomeController {
 				
 				int tf = 10*title + 5*headers + body;
 				//TODO:Calculate the normalized tf
-				Double ntf = 1.0/tf;
+				Double ntf = 1.0*tf;
 				
 				//TODO:Calculate TF*IDF
 				double temp = ntf*IDF();
@@ -564,7 +584,7 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 		
 		// to store the positions and work on them 
 		// brdu msh 3auz a3dl fl trteb
-		System.out.println("no errors at middle phrase search");
+		//System.out.println("no errors at middle phrase search");
 		HashMap<String , ArrayList<Integer>> Positions =  new LinkedHashMap<String,ArrayList<Integer>>(); 
 		
 		
@@ -581,7 +601,7 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 			if(size== myMap.size()) // if the URL has number of document = number of elements which we search on it  => doc feha ahmed , w doc feha sabry w doc feha abdelhady
 			{
 				// iterating over all elements and store their positions
-				System.out.println("no errors at mid phrase search");
+				//System.out.println("no errors at mid phrase search");
 				for(int i = 0 ; i < size ; i ++)
 				{
 					// ana msh mot2kd mn mwdo3 el casting da bs atmna eno yeshtghl
@@ -590,13 +610,15 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 									Integer.class));					
 				}
 				
-				System.out.println("no errors at mid phrase search");
+				
 				Iterator<Entry<String , ArrayList<Integer>>> IT = Positions.entrySet().iterator() ;
 				Map.Entry<String, ArrayList<Integer>> FirstName = IT.next(); 
-				
+				//System.out.println("no errors at mid phrase search");
 				// hena b5ly shoghly dayman 3la awl kelma fl searching  w bdwr 3ala el sequance menha baa
 				for(int m = 0; m < size ; m++) {
-					if(compare (size , FirstName.getValue().get(m) , IT, 2)) // el lvlIndc = 2 34an lw el size = 4 ab2a akny shaghal 1 based fa na habd2 mn level 2
+					System.out.println("Pharse test1 "+FirstName.getValue().size());
+			
+					if(FirstName.getValue().size() > m && compare (size , FirstName.getValue().get(m) , IT, 2) ) // el lvlIndc = 2 34an lw el size = 4 ab2a akny shaghal 1 based fa na habd2 mn level 2
 						{
 							// check for at least 1 lw l2et 
 							// add the URl to the founded
@@ -607,7 +629,7 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 				//System.out.println("no errors at mid phrase search");
 			}
 		}
-		System.out.println("no errors at end phrase search");
+		//System.out.println("no errors at end phrase search");
 		return URLContainer; 
 	}
 	
@@ -615,33 +637,38 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 	{
 		// base case 
 		if(LvlInd == size) { // last level 34an ana shghal 1 based
-			Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
-			for(int i = 0 ; i < FirstRow.getValue().size(); i++)
-			{
-				if(FirstRow.getValue().get(i) == number + 1 )
-					return true ; // found the last index 
-				else if (FirstRow.getValue().get(i) > number ) return false ; 
+			if(IT.hasNext())
+			{	
+				Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
+				for(int i = 0 ; i < FirstRow.getValue().size(); i++)
+				{
+					if(FirstRow.getValue().get(i) == number + 1 )
+						return true ; // found the last index 
+					else if (FirstRow.getValue().get(i) > number ) return false ; 
+				}
 			}
 			return false ;
 		}
 		
 		// found the sequence 
 		Boolean found = false ;
-		
-		Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
-		for(int i = 0 ; i < FirstRow.getValue().size(); i++)
+		if(IT.hasNext())
 		{
-			if(FirstRow.getValue().get(i) == number + 1 )
+			Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
+			for(int i = 0 ; i < FirstRow.getValue().size(); i++)
 			{
-				// ana msh 3arf 7war el hasnext de hya el bt5ly el iterator yet7rk wla a lw hya fa yeb2a keda el shoghl tmaam
-				IT.hasNext();
-				found = compare(size , number + 1 , IT,LvlInd + 1) ; // found the last index 
+				if(FirstRow.getValue().get(i) == number + 1 )
+				{
+					// ana msh 3arf 7war el hasnext de hya el bt5ly el iterator yet7rk wla a lw hya fa yeb2a keda el shoghl tmaam
+					//IT.hasNext();
+					IT.next();
+					found = compare(size , number + 1 , IT,LvlInd + 1) ; // found the last index 
+				}
+				else if (FirstRow.getValue().get(i) > number ) return false ; 
+				
+				if(found == true) return true;
 			}
-			else if (FirstRow.getValue().get(i) > number ) return false ; 
-			
-			if(found == true) return true;
 		}
-		
 
 		
 		return found;
