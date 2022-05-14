@@ -18,7 +18,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Element;
 import org.jsoup.safety.Whitelist;
+import org.jsoup.select.Elements;
 import org.jsoup.select.Evaluator.ContainsText;
 import org.jsoup.select.Selector;
 //import org.springframework.data.mongodb.core.mapping.Document;
@@ -251,7 +253,28 @@ public class HomeController {
 			long end_jsoup = System.currentTimeMillis();
 			//System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
 			//get title --------------------------------------------------------------------------
-			String TITLE = htmldoc.select("title").toString();
+			Elements temp_TITLE= htmldoc.select("meta");
+			temp_TITLE = temp_TITLE.attr("name","description");
+			//String TITLE = temp_TITLE.attr("content").;
+			String TITLE =htmldoc.select("title").toString();;
+			for (Element link : temp_TITLE) {
+				
+					String Tempstr= link.attr("content");
+					for(int k=0;k<Copy_String_list.size();k++)
+					{
+						if(Tempstr.contains(Copy_String_list.get(k)+" "))
+						{
+							TITLE = Tempstr;
+							if(TITLE.length()>70)
+							{
+								TITLE = TITLE.substring(0,70);
+							}
+							break;
+						}
+					}
+				  //String linkText = link.text();
+				}
+			System.out.println("Title = "+TITLE);
 			TITLE = Jsoup.clean(TITLE, Whitelist.none());
 			// get description ------------------------------------------------------------------
 			String description = "no description";
@@ -371,7 +394,29 @@ public class HomeController {
 			long end_jsoup = System.currentTimeMillis();
 			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
 			// get document title
-			String TITLE = htmldoc.select("title").toString();
+			//get title --------------------------------------------------------------------------
+			Elements temp_TITLE= htmldoc.select("meta");
+			temp_TITLE = temp_TITLE.attr("name","description");
+			//String TITLE = temp_TITLE.attr("content").;
+			String TITLE =htmldoc.select("title").toString();;
+			for (Element link : temp_TITLE) {
+				
+					String Tempstr= link.attr("content");
+					for(int k=0;k<Copy_String_list.size();k++)
+					{
+						if(Tempstr.contains(Copy_String_list.get(k)+" "))
+						{
+							TITLE = Tempstr;
+							if(TITLE.length()>70)
+							{
+								TITLE = TITLE.substring(0,70);
+							}
+							break;
+						}
+					}
+				  //String linkText = link.text();
+				}
+			System.out.println("Title = "+TITLE);
 			TITLE = Jsoup.clean(TITLE, Whitelist.none());
 
 			// get description 
