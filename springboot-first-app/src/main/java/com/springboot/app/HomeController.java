@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
@@ -56,6 +57,7 @@ public class HomeController {
 	private static int no_urls;
 	private static ArrayList<String> Copy_String_list = new ArrayList<String>();
 	private static String last_query = new String();
+	private static boolean is_phrase = false;
 	//public static int number_documents;
 //	@RequestMapping(value="/")
 //	public String greeting()
@@ -69,27 +71,38 @@ public class HomeController {
 	}
 	public static void clear()
 	{
-		for(int i=Copy_String_list.size();i>0;i--)
-		{
-			Copy_String_list.remove(i-1);
-		}
-		for(int i=urls.size();i>0;i--)
-		{
-			urls.remove(i-1);
-		}
-		for(int i=tf_idf.size();i>0;i--)
-		{
-			tf_idf.remove(i-1);
-		}
+//		for(int i=Copy_String_list.size();i>0;i--)
+//		{
+//			Copy_String_list.remove(i-1);
+//		}
+		Copy_String_list.clear();
+		urls.clear();
+		no_urls = 0;
+		tf_idf.clear();
 		out.clear();
+		is_phrase = false;
 	}
 
-	// suggestion backend for interface
+	// suggestion backend for interface--------------------------------------------------------------------
 	@GetMapping(value="/suggestion/{query}")
 	public ArrayList<String> test(@PathVariable String query)
-	{
+	{	
 		// get connection with queries database
+		if(query.startsWith("\"") && query.endsWith("\""))
+		{
+			query = query.substring(0, query.length() - 1);
+			query = query.substring(1);
+		}
+		else if(query.startsWith("\""))
+		{
+			query = query.substring(1);
+		}
+		
 		ArrayList<String> suggestion_array = new ArrayList<String>();
+		if(query =="")
+		{
+			return suggestion_array;
+		}
 		MongoDatabase SUGGESTION_DB = Indexer.get_database("SUGGESTION",Indexer.crawler_database_connection);
 		MongoCollection<Document> SUGGESTION_COL = Indexer.get_collection(SUGGESTION_DB, "SUGGESTION_COL");
 		
@@ -111,13 +124,21 @@ public class HomeController {
 		return suggestion_array;
 	}
 	
-	// handle user query
+	// handle user query -----------------------------------------------------------------------------------
 	@GetMapping(value="/data/{query}")
 	public ArrayList<Document> DatabaseResponse(@PathVariable String query)
 	{
 		
 		// check if query is submitted before or not 
 		clear();
+
+		if(query.startsWith("\"") && query.endsWith("\""))
+		{
+			System.out.println(query);
+			query = query.substring(0, query.length() - 1);
+			query = query.substring(1);
+			is_phrase = true;
+		}
 		last_query = query;
 		ArrayList<String> suggestion_array = new ArrayList<String>();
 		MongoDatabase SUGGESTION_DB = Indexer.get_database("SUGGESTION",Indexer.crawler_database_connection);
@@ -146,18 +167,13 @@ public class HomeController {
 				System.out.println("Query already in database");
 			}	
 		}
-		
-		
-		// check if query is submitted before or not 
-		
+		// retreive query from database----------------------------------------------
 		ArrayList<Document> JSON_Data = new ArrayList<Document>();
-		String Copy_query = new String (query);
-		//Copy_String_list= copy(Copy_query);
+		String Copy_query = new String (query);;
 		copy(Copy_query);
-		//urls = new ArrayList<String>();
-		ReterivedDocuments = Query_Process (query,urls);
-		no_urls = urls.size();
-		System.out.println("no errors before phrase search");
+		ReterivedDocuments = Query_Process (query);
+		//no_urls = urls.size();
+		System.out.println("urls arr size = "+no_urls);
 		if(ReterivedDocuments == null)
 		{
 			JSON_Data.add(new Document("SIZE",no_urls));
@@ -165,47 +181,55 @@ public class HomeController {
 		}
 		else
 		{
-			System.out.println(ReterivedDocuments.size());
+			System.out.println("number of documents retrived from database = "+ReterivedDocuments.size());
 		}
 			
 		// call phrase search----------------------------------------------------------------------
-		ArrayList<String> phrase_urls = new ArrayList<String>();
-		long start_phrase = System.currentTimeMillis();
-		if(Copy_String_list.size() > 1)
+		if (is_phrase)
 		{
-			System.out.println("Size words = "+Copy_String_list.size());
-			phrase_urls = phraseSearch(ReterivedDocuments);
-		}
-		long end_phrase = System.currentTimeMillis();
-		System.out.println("Time of phrase search = "+(end_phrase-start_phrase));
-		
-		// call ranker ----------------------------------------------------------------------------
-		long start_ranker = System.currentTimeMillis();
-		ArrayList<String> ranker_urls = TF_IDF();
-		long end_ranker = System.currentTimeMillis();
-		System.out.println("Time of ranker = "+(end_ranker-start_ranker));
-		// merge urls--------------------------------------------------------------------------------
-		HashMap<String, Integer> temphash = new HashMap<String,Integer>();
-		for(int i=0;i<phrase_urls.size();i++)
-		{
-			urls.add(phrase_urls.get(i));
-			temphash.put(phrase_urls.get(i), 1);
-		}
-		for(int i=0;i<ranker_urls.size();i++)
-		{
-			if(temphash.get(ranker_urls.get(i))  == null)
+			//ArrayList<String> phrase_urls = new ArrayList<String>();
+			long start_phrase = System.currentTimeMillis();
+			if(Copy_String_list.size() > 1)
 			{
-				urls.add(ranker_urls.get(i));
-				temphash.put(ranker_urls.get(i), 1);
+				//System.out.println("Size words = "+Copy_String_list.size());
+				urls = phraseSearch(ReterivedDocuments);
+				//System.out.println("no of phrase urls = "+phrase_urls.size());
 			}
+			long end_phrase = System.currentTimeMillis();
 		}
+		else
+		{
+			// call ranker ----------------------------------------------------------------------------
+			long start_ranker = System.currentTimeMillis();
+			urls = TF_IDF();
+			long end_ranker = System.currentTimeMillis();
+			System.out.println("Time of ranker = "+(end_ranker-start_ranker));
+			System.out.println("no of ranker urls = "+urls.size());
+		}
+
+		//System.out.println("Time of phrase search = "+(end_phrase-start_phrase));
 		
-		// get  title and description for each document ------ get from database or parse .
-		// we have array list of urls(strings)
+
+		// merge urls--------------------------------------------------------------------------------
+//		HashMap<String, Integer> temphash = new HashMap<String,Integer>();
+//		for(int i=0;i<phrase_urls.size();i++)
+//		{
+//			urls.add(phrase_urls.get(i));
+//			temphash.put(phrase_urls.get(i), 1);
+//		}
+//		for(int i=0;i<ranker_urls.size();i++)
+//		{
+//			if(temphash.get(ranker_urls.get(i))  == null || temphash.get(ranker_urls.get(i))  == 0)
+//			{
+//				urls.add(ranker_urls.get(i));
+//				temphash.put(ranker_urls.get(i), 1);
+//			}
+//		}
+		
+		// get  title and description for each document ------ get from database or parse-------
 		no_urls = urls.size();
 		System.out.println("Number of urls send to front = "+no_urls);
 		JSON_Data.add(new Document("SIZE",no_urls));
-		System.out.println("urls retreived = "+no_urls);
 		int count_urls =0;
 		if(no_urls>10)
 		{
@@ -216,80 +240,80 @@ public class HomeController {
 			count_urls =no_urls;
 		}
 		long start = System.currentTimeMillis();
-		// some time passes
-		
 		for(int i =0;i<count_urls;i++)
 		{
 			long start_1 = System.currentTimeMillis();
-			// get data of url
+			// get data of url--------------------------------------------------------------------
 			long start_jsoup = System.currentTimeMillis();
 			String html_string = get_html(urls.get(i));
+			html_string = html_string.trim().replaceAll("\\s{2,}", " ");
 			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
 			long end_jsoup = System.currentTimeMillis();
-			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
+			//System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
+			//get title --------------------------------------------------------------------------
 			String TITLE = htmldoc.select("title").toString();
-			
-			
 			TITLE = Jsoup.clean(TITLE, Whitelist.none());
-
-			// get description 
+			// get description ------------------------------------------------------------------
 			String description = "no description";
 			html_string = Jsoup.clean(html_string, Whitelist.none());
-			int indexof_phrase = html_string.indexOf(query);
-			if(indexof_phrase !=-1)
-			{
-				if(indexof_phrase +100 <html_string.length())
-				{
-					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
-				}
-				else
-				{
-					description = html_string.substring(indexof_phrase);
-				}		
-			}
-			else
-			{	
-				for(int j =0;j<Copy_String_list.size();j++)
-				{
-					
-					// check headers & paragraphs
-					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
-						
-						break;
-					}
-					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
-						break;
-					}
-					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-						break;
-					}
-					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-						break;
-					}
-					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						String s = new String();
-						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-						break;
-					}
-					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
-						System.out.println("body");
-						break;
-					}
-				}
-			}
-			description = Jsoup.clean(description, Whitelist.none());
-			
+			description = get_description(html_string,htmldoc);
+//			
+//			int indexof_phrase = html_string.indexOf(query);
+//			if(indexof_phrase !=-1)
+//			{
+//				if(indexof_phrase +100 <html_string.length())
+//				{
+//					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
+//					System.out.println("Description of phrase = "+description);
+//				}
+//				else
+//				{
+//					description = html_string.substring(indexof_phrase);
+//				}		
+//			}
+//			else
+//			{	
+//				for(int j =0;j<Copy_String_list.size();j++)
+//				{
+//					
+//					// check headers & paragraphs
+//					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//						
+//						break;
+//					}
+//					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
+//						break;
+//					}
+//					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//						break;
+//					}
+//					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//						break;
+//					}
+//					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						String s = new String();
+//						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//						break;
+//					}
+//					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
+//						System.out.println("body");
+//						break;
+//					}
+//				}
+//			}
+//			description = Jsoup.clean(description, Whitelist.none());
+//			
 			//description = doc.select("p:contains("+"dagbanli"+")").toString();
 			//description = doc.select("p:first-of-type").toString();
 			//System.out.println("Des: "+description);
@@ -297,9 +321,9 @@ public class HomeController {
 			
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 100)
+			if(description.length() > 400)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 99));
+				json_doc.append("DESCRIPTION",description.substring(0, 399));
 			}
 			else
 			{
@@ -308,11 +332,11 @@ public class HomeController {
 			
 			JSON_Data.add(json_doc);
 			long end_1 = System.currentTimeMillis();
-			System.out.println("Time of 1 documents = "+(end_1-start_1));
+			//System.out.println("Time of 1 documents = "+(end_1-start_1));
 		}
 		long end = System.currentTimeMillis();
 		long elapsedTime = end - start;
-		System.out.println("Time of "+count_urls+" documents = "+elapsedTime);
+		//System.out.println("Time of "+count_urls+" documents = "+elapsedTime);
 		return JSON_Data;
 	}
 	
@@ -342,6 +366,7 @@ public class HomeController {
 			long start_jsoup = System.currentTimeMillis();
 
 			String html_string = get_html(urls.get(i));
+			html_string = html_string.trim().replaceAll("\\s{2,}", " ");
 			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
 			long end_jsoup = System.currentTimeMillis();
 			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
@@ -352,66 +377,71 @@ public class HomeController {
 			// get description 
 			String description = "no description";
 			html_string = Jsoup.clean(html_string, Whitelist.none());
-			int indexof_phrase = html_string.indexOf(last_query);
-			if(indexof_phrase !=-1)
-			{
-				if(indexof_phrase +100 <html_string.length())
-				{
-					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
-				}
-				else
-				{
-					description = html_string.substring(indexof_phrase);
-				}		
-			}
-			else
-			{	
-				for(int j =0;j<Copy_String_list.size();j++)
-				{
-					//System.out.println("S"+j+Copy_String_list.get(j));
-					// check headers & paragraphs
-					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
-						
-						break;
-					}
-					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
-						break;
-					}
-					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-						break;
-					}
-					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-						break;
-					}
-					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-						break;
-					}
-					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-					{
-						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
-						System.out.println("body");
-						break;
-					}
-				}
-			}
-			description = Jsoup.clean(description, Whitelist.none());
+			description = get_description(html_string,htmldoc);
+//			int indexof_phrase = html_string.indexOf(last_query);
+//			if(indexof_phrase !=-1)
+//			{
+//				if(indexof_phrase +100 <html_string.length())
+//				{
+//					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
+//				}
+//				else
+//				{
+//					description = html_string.substring(indexof_phrase);
+//				}		
+//			}
+//			else
+//			{	
+//				for(int j =0;j<Copy_String_list.size();j++)
+//				{
+//					//System.out.println("S"+j+Copy_String_list.get(j));
+//					// check headers & paragraphs
+//					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//						
+//						break;
+//					}
+//					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
+//						break;
+//					}
+//					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//						break;
+//					}
+//					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//						break;
+//					}
+//					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//						break;
+//					}
+//					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//					{
+//						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
+//						System.out.println("body");
+//						break;
+//					}
+//				}
+//			}
+//			description = Jsoup.clean(description, Whitelist.none());
 			//description.indexOf(query);
 			
+			if (description =="")
+			{
+				description = TITLE;
+			}
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 100)
+			if(description.length() > 400)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 99));
+				json_doc.append("DESCRIPTION",description.substring(0, 399));
 			}
 			else
 			{
@@ -419,11 +449,117 @@ public class HomeController {
 			}
 			JSON_Data.add(json_doc);
 			long end_1 = System.currentTimeMillis();
-			System.out.println("Time of 1 documents = "+(end_1-start_1));
+			//System.out.println("Time of 1 documents = "+(end_1-start_1));
 			}
 		return JSON_Data;
 	}
 	
+	public String get_parts(String s1,String searchword,int size_before_after)
+	{
+		String description2 = "";
+		int indexof_str = s1.indexOf(searchword);
+		if(indexof_str !=-1)
+		{
+			//found.
+			int len_query = searchword.length();
+			if(indexof_str -size_before_after >0)
+			{
+				description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+				description2 +="<strong>" ;	
+			}
+			else
+			{
+				description2 = s1.substring(0,indexof_str);
+				description2 +="<strong>" ;	
+			}
+			if(indexof_str+len_query +size_before_after <s1.length())
+			{
+				
+				description2 += s1.substring(indexof_str,indexof_str+len_query);
+				description2 +="</strong>" ;
+				description2 += s1.substring(indexof_str+len_query,indexof_str+len_query+size_before_after);
+				
+			}
+			else
+			{
+				description2 += s1.substring(indexof_str);
+				//description += s1.substring(indexof_str,indexof_str+len_query);
+				description2 +="</strong>" ;
+	
+			}		
+		}
+		return description2;
+	}
+	public String get_description(String html_string,org.jsoup.nodes.Document htmldoc)
+	{
+		String description = "";
+
+		if(is_phrase)
+		{
+			// get phrase quotation-------------------------------------------------------
+			description = get_parts(html_string, last_query, 200);
+			
+			System.out.println("Phrase = "+description);
+		}
+		else
+		{	
+			// get other descriptions------------------------------------------------------------------
+			description = "";
+			int lengthofdescription = 50;
+			for(int j =0;j<Copy_String_list.size();j++)
+			{
+				description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription);
+				// check headers & paragraphs
+//				if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h1 = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h1= Jsoup.clean(tag_h1, Whitelist.none());
+//					description += get_parts(tag_h1, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h2 = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h2= Jsoup.clean(tag_h2, Whitelist.none());
+//					description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h3 = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h3= Jsoup.clean(tag_h3, Whitelist.none());
+//					description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h4 = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h4= Jsoup.clean(tag_h4, Whitelist.none());
+//					description += get_parts(tag_h4, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h5 = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h5= Jsoup.clean(tag_h5, Whitelist.none());
+//					description += get_parts(tag_h5, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_body = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString();
+//					//System.out.println("tagbody : "+tag_body);
+//					tag_body= Jsoup.clean(tag_body, Whitelist.none());
+//					description += get_parts(tag_body, Copy_String_list.get(j), lengthofdescription, found);
+//					System.out.println("body : "+description);
+//					System.out.println("word : "+Copy_String_list.get(j));
+//					break;
+//				}
+				
+			}
+		}
+		return description;
+	}
 	// copy query to save it 
 	public void copy(String query)
 	{
@@ -437,7 +573,7 @@ public class HomeController {
 		//return string_array;	
 	}
 	// retreive query from database 
-	public HashMap<String,ArrayList<Document>> Query_Process (String query,ArrayList<String> urls)
+	public HashMap<String,ArrayList<Document>> Query_Process (String query)
 	{
 		
 		ArrayList<String> string_array = Indexer.Remove_tags(query);
@@ -450,7 +586,7 @@ public class HomeController {
 		System.out.println("TotalPages = "+TotalPages);
 		//HashMap<String,ArrayList<Document>> DocLists = new HashMap<String,ArrayList<Document>>();
 		HashMap<String,ArrayList<Document>> DocLists = new LinkedHashMap<String,ArrayList<Document>>();
-		System.out.println(string_array.size());
+		//System.out.println(string_array.size());
 		for(int i=0;i<string_array.size();i++)
 		{
 			//System.out.println("no Error sabry");
@@ -474,14 +610,14 @@ public class HomeController {
 						ArrayList<Document> list = new ArrayList<Document>();
 						list.add(doc);
 						DocLists.put(string_array.get(i), list);
-						urls.add(doc.getString("DOC_ID"));
+						//urls.add(doc.getString("DOC_ID"));
 					}
 					else
 					{
 						ArrayList<Document> list = DocLists.get(string_array.get(i));
 						list.add(doc);
 						DocLists.put(string_array.get(i), list);
-						urls.add(doc.getString("DOC_ID"));
+						//urls.add(doc.getString("DOC_ID"));
 					}
 
 				}
@@ -538,7 +674,7 @@ public class HomeController {
             public int compare(Map.Entry<String, Double> o1,
                                Map.Entry<String, Double> o2)
             {
-                return (o1.getValue()).compareTo(o2.getValue());
+                return (o2.getValue()).compareTo(o1.getValue());
             }
         });
          
@@ -559,7 +695,7 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 		HashMap<String , ArrayList<Document>> UrlMap =  new LinkedHashMap<String,ArrayList<Document>>() ; // -> 
 		
 		Iterator<Entry<String , ArrayList<Document>>> myIterator = myMap.entrySet().iterator() ;
-		System.out.println("no errors at start phrase search");
+		//System.out.println("no errors at start phrase search");
 		//iterating over the main map 
 		while(myIterator.hasNext())
 		{
@@ -616,7 +752,7 @@ public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>
 				//System.out.println("no errors at mid phrase search");
 				// hena b5ly shoghly dayman 3la awl kelma fl searching  w bdwr 3ala el sequance menha baa
 				for(int m = 0; m < size ; m++) {
-					System.out.println("Pharse test1 "+FirstName.getValue().size());
+					//System.out.println("Pharse test1 "+FirstName.getValue().size());
 			
 					if(FirstName.getValue().size() > m && compare (size , FirstName.getValue().get(m) , IT, 2) ) // el lvlIndc = 2 34an lw el size = 4 ab2a akny shaghal 1 based fa na habd2 mn level 2
 						{

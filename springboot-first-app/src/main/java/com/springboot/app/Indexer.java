@@ -30,7 +30,7 @@ import java.lang.UnknownError;
 import java.net.UnknownHostException;
 import java.util.*;
 
-@SuppressWarnings("deprecation")
+//@SuppressWarnings("deprecation")
 public class Indexer {
 
 	static Map<String, Integer> HashForDf = new HashMap<>();
@@ -260,6 +260,7 @@ public class Indexer {
 		// ---------------------------------------------------------------
 
 		// remove tags
+		s1 = Jsoup.clean(s1, Whitelist.none());
 		s1 = Jsoup.clean(s1, Whitelist.none());
 		// s2 = Jsoup.clean(s2, Whitelist.none());
 		// ----------------------------------------------------------------

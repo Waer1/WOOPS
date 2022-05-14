@@ -1,63 +1,28 @@
 import React from "react";
-import { FaSistrix, FaMicrophone } from "react-icons/fa";
-import { key, cx } from "../API";
 import axios from "axios";
 import Show from "./Show";
 import ReactPaginate from "react-paginate";
+import SearchField from "./SearchField";
 
 
 const Search = (props) => {
-  const postsPerPage = 3;
-
-  
+  const postsPerPage = 10;
+  var wordsinsearch = [];
 
   const goBack = () => {
     props.history.push("/");
   };
   
-  const [wordEntered, setState] = React.useState(
+  const [wordEntered] = React.useState(
     props.location.wordEntered ? props.location.wordEntered : ""
   );
+  wordsinsearch = wordEntered.trim().split(/\s+/);
 
   const [results, setResults] = React.useState([]);
-
-  const searchGoogle = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await axios.get(
-        `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${wordEntered}`
-      );
-      if (response) {
-        setResults(response.data);
-        //setInfo(response.data.searchInformation);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-  
-const changePage = async (e) => {
-  console.log(e.selected);
-  
-          try {
-          const response = await axios.get(
-            `/page/${e.selected+1}`
-          );
-          if (response) {
-            console.log("Done Sucessfully");
-            console.log(response);
-            setResults(response.data);
-          }
-        } catch (error) {
-          console.log(error);
-        }
-
-   
-};
+  const [Numberofresults, setNumberofresults] = React.useState(0);
 
   React.useEffect(() => {
     async function getPosts() {
-      console.log(wordEntered);
       if (props.location.wordEntered) {
         try {
           const response = await axios.get(
@@ -65,6 +30,7 @@ const changePage = async (e) => {
           );
           if (response) {
             setResults(response.data);
+            setNumberofresults(response.data[0].SIZE);
           }
         } catch (error) {
           console.log(error);
@@ -74,32 +40,59 @@ const changePage = async (e) => {
     getPosts();
   }, []);
 
+
+  const searchGoogle = async (e) => {
+
+    try {
+      const response = await axios.get(
+        `/data/${e}`
+      );
+      if (response) {
+        setResults(response.data);
+        setNumberofresults(response.data[0].SIZE);
+        
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+
+
+const changePage = async (e) => {
+          try {
+          const response = await axios.get(
+            `/page/${e.selected+1}`
+          );
+          if (response) {
+            console.log("Done Sucessfully");
+            setResults(response.data);
+          }
+        } catch (error) {
+          console.log(error);
+        } 
+};
+
+
+
   return (
     <div className="search">
       <div className="search__form">
         <div className="search__form-logo">
           <img src="/images/small.png" alt="logo" onClick={goBack} />
         </div>
-        <div className="search__form-input">
-          <form className="home__form" onSubmit={searchGoogle}>
-            <input
-              type="text"
-              className="home__input"
-              value={wordEntered}
-              onChange={(e) => setState(e.target.value)}
-              required
-            />
-
-            <FaSistrix className="search__icon" />
-            <FaMicrophone className="microphone" />
-          </form>
+        <div className="Second_Form">
+          <SearchField search={searchGoogle} />
         </div>
       </div>
-      <Show results={results} />
+      <div className="show__info">
+        {Numberofresults !== 0 ? `Total results: ${Numberofresults}` : ""}
+      </div>
+      <Show results={results} Wordsinsearch={wordsinsearch}/>
       <ReactPaginate
         previousLabel={"Previous"}
         nextLabel={"Next"}
-        pageCount={Math.ceil(results.SIZE /postsPerPage) }
+        pageCount={Math.ceil(Numberofresults / postsPerPage) }
         onPageChange={changePage}
         containerClassName={"paginationBttns"}
         previousLinkClassName={"previousBttn"}

@@ -35,10 +35,10 @@ body {
 }
 .microphone {
   position: absolute;
-  top: 17px;
-  right: 20px;
-  font-size: 20px;
-  color: #4285f4;
+  top: 8px;
+  right: 6px;
+  font-size: 34px;
+  color: #414244;
 }
 .home__input {
   width: 100%;
@@ -64,20 +64,37 @@ body {
   border-radius: 3px;
 }
 
+.clear__btn{
+  outline: none;
+  color: #5f6368;
+  background: #f2f2f2;
+  margin-left: 30px;
+  width: auto;
+  padding: 11px 12px;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.Second_Form{
+  width: 40rem;
+  margin-left: 20px;
+
+}
+
 .search {
   width: 80%;
-  margin: 30px auto;
+  margin: 30px 7rem;
 }
 .search__form {
   display: flex;
   width: 100%;
-  align-items: center;
   border-bottom: 1px solid #f2f2f2;
   padding-bottom: 20px;
 }
 .search__form-logo {
-  width: 92px;
-  height: 30px;
+  width: auto;
+  height: 60px;
   cursor: pointer;
 }
 .search__form-logo img {
@@ -93,9 +110,10 @@ body {
   width: 700px;
 }
 .show__info {
-  color: silver;
+  margin-top: 5px;
+  color: rgb(118, 118, 118);
   font-weight: normal;
-  font-size: 14px;
+  font-size: 30px;
 }
 .show__details {
   margin-top: 25px;
@@ -154,11 +172,10 @@ body {
 .dataResult {
   margin-top: 5px;
   width: 100%;
-  height: 200px;
+  height: auto;
   background-color: white;
   box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
-  overflow: hidden;
-  overflow-y: auto;
+  overflow-x: scroll;
 }
 
 .dataResult::-webkit-scrollbar {
@@ -167,7 +184,8 @@ body {
 
 .dataResult .dataItem {
   width: 100%;
-  height: 50px;
+  height: auto;
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   color: black;
@@ -180,3 +198,5 @@ body {
 .dataItem p {
   margin-left: 10px;
 }
+
+

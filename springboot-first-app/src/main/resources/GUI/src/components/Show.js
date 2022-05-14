@@ -1,14 +1,16 @@
 import React from "react";
+import parse from "html-react-parser";
 
 const Show = (props) => {
-  const { results } = props;
+  const { results  } = props;
+  const value = [...results];
+  value.shift();
   return (
     <div className="show">
       
-      {results.length > 0
-        ? results.map((result) => (
-          //{ console.log(result)};
-            <div className="show__details">
+      {value.length > 0
+        ? value.map((result) => (
+            <div key={Math.random(0,5000)} className="show__details">
               <div className="show__link">
                 <a href={result.TITLE}>{result.TITLE}</a>
               </div>
@@ -16,7 +18,7 @@ const Show = (props) => {
                 <a href={result.URL}>{result.URL}</a>
               </div>
               <div className="show__description">
-                <p>{result.DESCRIPTION}</p>
+              <p>{parse(result.DESCRIPTION)}</p>
               </div>
             </div>
           ))
@@ -28,7 +30,5 @@ const Show = (props) => {
 export default Show;
 
 /*
-<div className="show__info">
-        //{info ? `Total results: ${info.totalResults}` : ""}
-      </div>
+<p>{parse(result.DESCRIPTION)}</p>
 */
