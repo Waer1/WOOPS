@@ -92,12 +92,12 @@ public class HomeController {
 		// get connection with queries database
 		if(query.startsWith("\"") && query.endsWith("\""))
 		{
-			query = query.substring(0, query.length() - 1);
-			query = query.substring(1);
+			query = query.replace("\"", "$");
+			//query = query.substring(1);
 		}
 		else if(query.startsWith("\""))
 		{
-			query = query.substring(1);
+			//query = query.substring(1);
 		}
 		
 		ArrayList<String> suggestion_array = new ArrayList<String>();
@@ -137,12 +137,14 @@ public class HomeController {
 		if(query.startsWith("\"") && query.endsWith("\""))
 		{
 			System.out.println(query);
-			query = query.substring(0, query.length() - 1);
-			query = query.substring(1);
+			//query = query.substring(0, query.length() - 1);
+			//query = query.substring(1);
+			query = query.replace("\"", "$");
 			is_phrase = true;
+			System.out.println("Phrase Search not Ranker : "+query);
 		}
-		last_query = query;
-		ArrayList<String> suggestion_array = new ArrayList<String>();
+		
+		//last_query = query;
 		MongoDatabase SUGGESTION_DB = Indexer.get_database("SUGGESTION",Indexer.crawler_database_connection);
 		MongoCollection<Document> SUGGESTION_COL = Indexer.get_collection(SUGGESTION_DB, "SUGGESTION_COL");
 		
@@ -151,8 +153,17 @@ public class HomeController {
 		MongoCursor<Document> it_SUGGESTION = iterDoc_SUGGESTION.iterator();
 		if(it_SUGGESTION.hasNext())
 		{
+			int count_query = 0;
 			Document doc = it_SUGGESTION.next();
-			int count_query = doc.getInteger("count");
+			try
+			{
+				count_query = doc.getInteger("count");
+			}
+			catch(Exception e)
+			{
+				System.out.println("Count not found in suggestion");
+			}
+			
 			count_query++;
 			SUGGESTION_COL.updateOne(Filters.eq("_id",doc.getString("_id")), Updates.set("count",count_query ));
 		}
@@ -171,11 +182,18 @@ public class HomeController {
 		}
 		// retreive query from database----------------------------------------------
 		ArrayList<Document> JSON_Data = new ArrayList<Document>();
+		//query = query.toLowerCase();
+		if(is_phrase)
+		{
+			query = query.substring(0, query.length() - 1);
+			query = query.substring(1);
+		}
+		last_query = query;
 		String Copy_query = new String (query);;
 		copy(Copy_query);
 		ReterivedDocuments = Query_Process (query);
 		//no_urls = urls.size();
-		System.out.println("urls arr size = "+no_urls);
+		System.out.println("urls arr size reterived from database = "+no_urls);
 		if(ReterivedDocuments == null)
 		{
 			JSON_Data.add(new Document("SIZE",no_urls));
@@ -230,7 +248,7 @@ public class HomeController {
 		
 		// get  title and description for each document ------ get from database or parse-------
 		no_urls = urls.size();
-		System.out.println("Number of urls send to front = "+no_urls);
+		System.out.println("Number of urls of document send to front = "+no_urls);
 		JSON_Data.add(new Document("SIZE",no_urls));
 		int count_urls =0;
 		if(no_urls>10)
@@ -256,29 +274,55 @@ public class HomeController {
 			Elements temp_TITLE= htmldoc.select("meta");
 			temp_TITLE = temp_TITLE.attr("name","description");
 			//String TITLE = temp_TITLE.attr("content").;
-			String TITLE =htmldoc.select("title").toString();;
+			String TITLE =htmldoc.select("title").toString();
+			boolean found_title = false;
 			for (Element link : temp_TITLE) {
 				
 					String Tempstr= link.attr("content");
-					for(int k=0;k<Copy_String_list.size();k++)
+					//Tempstr = Tempstr.toLowerCase();
+					if(Tempstr.toLowerCase().contains(query.toLowerCase()))
 					{
-						if(Tempstr.contains(Copy_String_list.get(k)+" "))
+						TITLE = Tempstr;
+						if(TITLE.length()>70)
 						{
-							TITLE = Tempstr;
-							if(TITLE.length()>70)
+							TITLE = TITLE.substring(0,70);	
+						}
+						System.out.println("Found TITLE as phrase");
+						found_title = true;
+					}
+					else
+					{
+						
+						for(int k=0;k<Copy_String_list.size();k++)
+						{
+							if(Tempstr.toLowerCase().contains(Copy_String_list.get(k).toLowerCase()+" "))
 							{
-								TITLE = TITLE.substring(0,70);
+								TITLE = Tempstr;
+								if(TITLE.length()>70)
+								{
+									TITLE = TITLE.substring(0,70);
+								}
+								found_title = true;
+								break;
 							}
+						}
+						if (found_title)
+						{
 							break;
 						}
 					}
 				  //String linkText = link.text();
 				}
+			if (!found_title)
+			{
+				System.out.println("NO TITLE in meta data match query");
+			}
 			System.out.println("Title = "+TITLE);
 			TITLE = Jsoup.clean(TITLE, Whitelist.none());
 			// get description ------------------------------------------------------------------
 			String description = "no description";
 			html_string = Jsoup.clean(html_string, Whitelist.none());
+			//html_string = html_string.toLowerCase();
 			description = get_description(html_string,htmldoc);
 //			
 //			int indexof_phrase = html_string.indexOf(query);
@@ -390,6 +434,7 @@ public class HomeController {
 
 			String html_string = get_html(urls.get(i));
 			html_string = html_string.trim().replaceAll("\\s{2,}", " ");
+			html_string = html_string.toLowerCase();
 			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
 			long end_jsoup = System.currentTimeMillis();
 			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
@@ -399,12 +444,24 @@ public class HomeController {
 			temp_TITLE = temp_TITLE.attr("name","description");
 			//String TITLE = temp_TITLE.attr("content").;
 			String TITLE =htmldoc.select("title").toString();;
+			boolean found_title = false;
 			for (Element link : temp_TITLE) {
 				
 					String Tempstr= link.attr("content");
+					//Tempstr = Tempstr.toLowerCase();
+					if(Tempstr.toLowerCase().contains(last_query.toLowerCase()))
+					{
+						TITLE = Tempstr;
+						if(TITLE.length()>70)
+						{
+							TITLE = TITLE.substring(0,70);	
+						}
+						System.out.println("Found TITLE as phrase");
+						found_title = true;
+					}
 					for(int k=0;k<Copy_String_list.size();k++)
 					{
-						if(Tempstr.contains(Copy_String_list.get(k)+" "))
+						if(Tempstr.toLowerCase().contains(Copy_String_list.get(k).toLowerCase()+" "))
 						{
 							TITLE = Tempstr;
 							if(TITLE.length()>70)
@@ -416,6 +473,10 @@ public class HomeController {
 					}
 				  //String linkText = link.text();
 				}
+			if (!found_title)
+			{
+				System.out.println("NO TITLE in meta data match query");
+			}
 			System.out.println("Title = "+TITLE);
 			TITLE = Jsoup.clean(TITLE, Whitelist.none());
 
@@ -502,7 +563,8 @@ public class HomeController {
 	public String get_parts(String s1,String searchword,int size_before_after)
 	{
 		String description2 = "";
-		int indexof_str = s1.indexOf(searchword);
+		int indexof_str = s1.toLowerCase().indexOf(searchword);
+		
 		if(indexof_str !=-1)
 		{
 			//found.
@@ -542,7 +604,7 @@ public class HomeController {
 		if(is_phrase)
 		{
 			// get phrase quotation-------------------------------------------------------
-			description = get_parts(html_string, last_query, 200);
+			description = get_parts(html_string, last_query.toLowerCase(), 200);
 			
 			System.out.println("Phrase = "+description);
 		}
@@ -553,7 +615,7 @@ public class HomeController {
 			int lengthofdescription = 50;
 			for(int j =0;j<Copy_String_list.size();j++)
 			{
-				description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription);
+				description += get_parts(html_string, Copy_String_list.get(j).toLowerCase(), lengthofdescription);
 				// check headers & paragraphs
 //				if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
 //				{
@@ -732,6 +794,77 @@ public class HomeController {
         return finale;
 	}
 	
+	
+//	public static double IDF(int DF)
+//	{
+//		return Math.log10((double)TotalPages/DF);
+//	}
+//	
+//	public static ArrayList<String> TF_IDF()
+//	{	
+//			//entry = map.entrySet().iterator().next();
+//		for (ArrayList<Document> entry : map.values())
+//		{	
+//			docs = entry;
+//			for (Document it : docs)		
+//			{
+//				double temp = 0.0;
+//				//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
+//				String s = it.getString("DOC_ID");
+//				Double DbNormTF = it.getDouble("TF");
+//				FindIterable<Document> iterDoc2 = rankerColl.find(Filters.eq("Url", s));
+//				
+//				if(DbNormTF < 0.5)
+//				{
+//					int DF = it.getInteger("IDF");
+//					int title = it.getInteger("Title");
+//					int headers = it.getInteger("Headers");
+//					int body = it.getInteger("Other");
+//					int popularity = iterDoc2.first().getInteger("popularity");
+////					List<Integer> pos = it.getList("POSITION", Integer.class);
+////					int firstPosition = pos.get(0);
+//					
+//					int tf = title + headers + body;
+//					Double totalWords = (tf/DbNormTF);
+//					
+//					//TODO:Calculate the normalized tf
+//					Double ntf = (10*title + 5*headers + body)/totalWords;
+//					
+//					//TODO:Calculate TF*IDF
+//					temp = ntf*IDF(DF)*popularity;
+//				}
+//				
+//				Double d = out.get(s);
+//				if (d != null)
+//				{
+//					temp += d;
+//					out.remove(s);
+//				}
+//				out.put(s, temp);
+//			}
+//		}
+//		// Create a list from elements of HashMap
+//        List<Map.Entry<String, Double> > list =
+//               new LinkedList<Map.Entry<String, Double> >(out.entrySet());
+// 
+//        // Sort the list
+//        Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
+//            public int compare(Map.Entry<String, Double> o1,
+//                               Map.Entry<String, Double> o2)
+//            {
+//                return (o2.getValue()).compareTo(o1.getValue());
+//            }
+//        });
+//
+//         
+//        // put data from sorted list to array of strings
+//        ArrayList<String> finale = new ArrayList<String>();
+//        for (Map.Entry<String, Double> aa : list) {
+//            System.out.println(aa.getKey() + " | " + aa.getValue());
+//        	finale.add(aa.getKey());
+//        }
+//        return finale;
+//	}
 	// phrase search
 	
 public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>myMap){
