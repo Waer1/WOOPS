@@ -170,7 +170,8 @@ public class Indexer {
 	
 				// filter documents
 				// detect tags for ranker
-				String s1 = htmldoc.toString();
+				//String s1 = htmldoc.toString();
+				String s1 = htmldoc.select("*").text();
 				ArrayList<String> string_array = Remove_tags(s1);
 				String title = htmldoc.select("title").text();
 				String headers = htmldoc.select("h1").text();

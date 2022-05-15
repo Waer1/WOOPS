@@ -107,15 +107,14 @@ public class Indexer {
 
 	public static void run_indexer() {
 		// ------------------------------ get database of links & documents
-
-		MongoDatabase Crawlerdb = get_database("NewCrawlerDB", crawler_database_connection);	
-		MongoCollection<Document> crawlercol = get_collection(Crawlerdb,"Documents");
-		int size_Docs = (int)crawlercol.count();
-		//System.out.println(crawlercol.count());
+		MongoDatabase Crawlerdb = get_database("Crawler", crawler_database_connection);	
+		MongoCollection<Document> crawlercol = get_collection(Crawlerdb,"Crawler");
+		int size_Docs = (int)crawlercol.countDocuments();
+		System.out.println(crawlercol.countDocuments());
 		//ArrayList<Document> docs = crawlercol.find();
 		FindIterable<Document> iterDoc = crawlercol.find();
 		MongoCursor<Document> it = iterDoc.iterator();
-		Document doc = it.next();
+		//Document doc = it.next();
 		//System.out.println(doc);
 		
 		// ------------------------------ get collection of documents & size
@@ -126,18 +125,18 @@ public class Indexer {
 		//MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
 		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
 		MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
-		//setindexes(indexercol);
+		setindexes(indexercol);
 		boolean stop_indexeing = false;
 		for (int i = 0; i < size_Docs; i++) {
 			// retrieve document
 			boolean canfetch = true;
 			Document crawlerdoc =null;
-			//2471
-			while(i<0)
-			{
-				crawlerdoc = it.next();
-				i++;
-			}
+//			//2471
+//			while(i<0)
+//			{
+//				crawlerdoc = it.next();
+//				i++;
+//			}
 			while(!it.hasNext())
 			{
 				stop_indexeing = true;
@@ -150,29 +149,27 @@ public class Indexer {
 			
 			// check if document needed to be indexed or not from crawler
 
-//			if(crawlerdoc.getString("changes").equals("0"))
-//			{
-//				
+			
+			org.jsoup.nodes.Document htmldoc = Jsoup.parse( crawlerdoc.getString("html"));
+//			System.out.println("doc "+htmldoc);
+//			try {
+//				Thread.currentThread().sleep(5000);
+//			} catch (InterruptedException e1) {
+//				// TODO Auto-generated catch block
+//				e1.printStackTrace();
 //			}
-			org.jsoup.nodes.Document htmldoc = null;
-			String htmldoc_ID = crawlerdoc.getString("link");
-			try {
-				htmldoc = Jsoup.connect(htmldoc_ID).get();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				System.out.println("handled execption");
-				canfetch = false;
-				e1.printStackTrace();
-			}
+			String htmldoc_ID = crawlerdoc.getString("Url");
+			
 
 
 			if(canfetch)
 			{
-				delete_doc_ID(indexercol,htmldoc_ID,0);
+				//delete_doc_ID(indexercol,htmldoc_ID,0);
 	
 				// filter documents
 				// detect tags for ranker
-				String s1 = htmldoc.toString();
+				//String s1 = htmldoc.toString();
+				String s1 = htmldoc.select("*").text();
 				ArrayList<String> string_array = Remove_tags(s1);
 				String title = htmldoc.select("title").text();
 				String headers = htmldoc.select("h1").text();
@@ -181,6 +178,7 @@ public class Indexer {
 				headers += " " + htmldoc.select("h4").text();
 				headers += " " + htmldoc.select("h5").text();
 				headers += " " + htmldoc.select("h6").text();
+				
 				// String paragraphs = doc.select("p").text();
 	
 				ArrayList<String> headers_array = Remove_tags(headers);
@@ -193,7 +191,7 @@ public class Indexer {
 				headers_array = Remove_Stop_Words(headers_array);
 				title_array = Remove_Stop_Words(title_array);
 				// paragraphs_array = Remove_Stop_Words(paragraphs_array);
-				System.out.println("------------------------------------");
+				System.out.println("------------------------------------------------------");
 	
 				for (int j = 0; j < string_array.size(); j++) {
 					// System.out.println(string_array.get(j));
@@ -211,7 +209,7 @@ public class Indexer {
 				// hash_paragraphs = hashtags(hash_paragraphs,paragraphs_array);
 	
 				Map<String, ArrayList<Integer>> hashtable = FileOrgan(string_array);
-				ArrayList<Document> listofdocs = createdocuments(hashtable,htmldoc_ID,hash_title,hash_headers);
+				ArrayList<Document> listofdocs = createdocuments(hashtable,htmldoc_ID,hash_title,hash_headers,string_array.size());
 				
 				try {
 					
@@ -220,11 +218,12 @@ public class Indexer {
 				} catch (Exception e) {
 					System.out.println(e);
 				}
-				System.out.println("Document "+i+" is indexed");
+				System.out.println("Document "+i+" is indexed , Remaining Documents = "+(size_Docs-i-1));
 			}
 
 		}
 		UpdateIDF(HashForDf,indexercol,size_Docs);
+
 
 	}
 
@@ -233,15 +232,15 @@ public class Indexer {
 
 	public static MongoDatabase get_database(String databasename, String connection) {
 
-		// MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-		// MongoDatabase db = mongoClient2.getDatabase(databasename);
-		// return db;
+		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
+		 MongoDatabase db = mongoClient2.getDatabase(databasename);
+		 return db;
 
-		ConnectionString connectionString = new ConnectionString(connection);
-		MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connectionString).build();
-		MongoClient mongoClient = MongoClients.create(settings);
-		MongoDatabase database = mongoClient.getDatabase(databasename);
-		return database;
+//		ConnectionString connectionString = new ConnectionString(connection);
+//		MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connectionString).build();
+//		MongoClient mongoClient = MongoClients.create(settings);
+//		MongoDatabase database = mongoClient.getDatabase(databasename);
+//		return database;
 	}
 
 	// function get collection from database
@@ -260,6 +259,7 @@ public class Indexer {
 		// ---------------------------------------------------------------
 
 		// remove tags
+		s1 = Jsoup.clean(s1, Whitelist.none());
 		s1 = Jsoup.clean(s1, Whitelist.none());
 		// s2 = Jsoup.clean(s2, Whitelist.none());
 		// ----------------------------------------------------------------
@@ -414,12 +414,14 @@ public class Indexer {
 	}
 	
 	   public static void UpdateIDF(Map<String,Integer> hash, MongoCollection<Document> col ,int size) {
+		   System.out.println("Update IDF ");
 	        for (String s : hash.keySet())
 	        {
 	            //Double idf =  Math.log(size / HashForDf.get(s)) ;
 	            int idf = HashForDf.get(s);
 	            col.updateMany(Filters.eq("Word",s), Updates.set("IDF", idf));
 	        }
+	        System.out.println("Finished Update IDF ");
 	    }
 	    
 	////////////////////////////////
@@ -433,14 +435,14 @@ public class Indexer {
 
 	// convert from hashmap to document to be stored in database
 	public static ArrayList<Document> createdocuments(Map<String, ArrayList<Integer>> inverteddocs,
-			String doc_id, Map<String, Integer> hash_title, Map<String, Integer> hash_headers) {
+			String doc_id, Map<String, Integer> hash_title, Map<String, Integer> hash_headers,int size_doc) {
 		ArrayList<Document> listofdocs = new ArrayList<Document>();
 
 		for (String i : inverteddocs.keySet()) {
 			ArrayList<Integer> arr = inverteddocs.get(i);
 			Document doc1 = new Document("Word", i);
 			doc1.append("DOC_ID", doc_id);
-			doc1.append("TF", arr.get(0));
+			doc1.append("TF", arr.get(0)/(double)size_doc);
 			doc1.append("IDF", arr.get(1));
 			arr.remove(0);
 			arr.remove(0);
