@@ -61,11 +61,6 @@ public class HomeController {
 	private static String last_query = new String();
 	private static boolean is_phrase = false;
 	//public static int number_documents;
-//	@RequestMapping(value="/")
-//	public String greeting()
-//	{
-//		return "index.html";
-//	}
 	@RequestMapping(value="/mainpage/")
 	public String mainpage()
 	{
@@ -90,15 +85,15 @@ public class HomeController {
 	public ArrayList<String> test(@PathVariable String query)
 	{	
 		// get connection with queries database
-		if(query.startsWith("\"") && query.endsWith("\""))
-		{
-			query = query.replace("\"", "$");
-			//query = query.substring(1);
-		}
-		else if(query.startsWith("\""))
-		{
-			//query = query.substring(1);
-		}
+//		if(query.startsWith("\"") && query.endsWith("\""))
+//		{
+//			query = query.replace("\"", "$");
+//			//query = query.substring(1);
+//		}
+//		else if(query.startsWith("\""))
+//		{
+//			//query = query.substring(1);
+//		}
 		
 		ArrayList<String> suggestion_array = new ArrayList<String>();
 		if(query =="")
@@ -133,15 +128,14 @@ public class HomeController {
 		
 		// check if query is submitted before or not 
 		clear();
-
-		if(query.startsWith("\"") && query.endsWith("\""))
+		if(query.startsWith("\"") && query.endsWith("\"") && query.length()>2)
 		{
 			System.out.println(query);
 			//query = query.substring(0, query.length() - 1);
 			//query = query.substring(1);
-			query = query.replace("\"", "$");
+			//query = query.replace("\"", "$");
 			is_phrase = true;
-			System.out.println("Phrase Search not Ranker : "+query);
+			//System.out.println("Phrase Search not Ranker : "+query);
 		}
 		
 		//last_query = query;
@@ -192,7 +186,6 @@ public class HomeController {
 		String Copy_query = new String (query);;
 		copy(Copy_query);
 		ReterivedDocuments = Query_Process (query);
-		//no_urls = urls.size();
 		System.out.println("urls arr size reterived from database = "+no_urls);
 		if(ReterivedDocuments == null)
 		{
@@ -216,6 +209,7 @@ public class HomeController {
 				//System.out.println("no of phrase urls = "+phrase_urls.size());
 			}
 			long end_phrase = System.currentTimeMillis();
+			System.out.println("Time of ranker = "+(end_phrase-start_phrase));
 		}
 		else
 		{
@@ -249,7 +243,7 @@ public class HomeController {
 		// get  title and description for each document ------ get from database or parse-------
 		no_urls = urls.size();
 		System.out.println("Number of urls of document send to front = "+no_urls);
-		JSON_Data.add(new Document("SIZE",no_urls));
+		JSON_Data.add(new Document("SIZE",no_urls)); // send first document size to front
 		int count_urls =0;
 		if(no_urls>10)
 		{
@@ -264,12 +258,9 @@ public class HomeController {
 		{
 			long start_1 = System.currentTimeMillis();
 			// get data of url--------------------------------------------------------------------
-			long start_jsoup = System.currentTimeMillis();
 			String html_string = get_html(urls.get(i));
-			html_string = html_string.trim().replaceAll("\\s{2,}", " ");
+			html_string = html_string.trim().replaceAll("\\s{5,}", "     ");
 			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
-			long end_jsoup = System.currentTimeMillis();
-			//System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
 			//get title --------------------------------------------------------------------------
 			Elements temp_TITLE= htmldoc.select("meta");
 			temp_TITLE = temp_TITLE.attr("name","description");
@@ -283,10 +274,18 @@ public class HomeController {
 					if(Tempstr.toLowerCase().contains(query.toLowerCase()))
 					{
 						TITLE = Tempstr;
-						if(TITLE.length()>70)
+						if(TITLE.length()>100)
 						{
-							TITLE = TITLE.substring(0,70);	
+							TITLE = TITLE.substring(0,100);	
+							int lastindex = TITLE.lastIndexOf(" ");
+							if(lastindex !=-1)
+							{
+								TITLE = TITLE.substring(0,lastindex);
+								TITLE +="...";
+							}
+							
 						}
+						
 						System.out.println("Found TITLE as phrase");
 						found_title = true;
 					}
@@ -298,9 +297,16 @@ public class HomeController {
 							if(Tempstr.toLowerCase().contains(Copy_String_list.get(k).toLowerCase()+" "))
 							{
 								TITLE = Tempstr;
-								if(TITLE.length()>70)
+								if(TITLE.length()>100)
 								{
-									TITLE = TITLE.substring(0,70);
+									TITLE = TITLE.substring(0,100);	
+									int lastindex = TITLE.lastIndexOf(" ");
+									if(lastindex !=-1)
+									{
+										TITLE = TITLE.substring(0,lastindex);
+										TITLE +="...";
+									}
+									
 								}
 								found_title = true;
 								break;
@@ -318,10 +324,10 @@ public class HomeController {
 				System.out.println("NO TITLE in meta data match query");
 			}
 			System.out.println("Title = "+TITLE);
-			TITLE = Jsoup.clean(TITLE, Whitelist.none());
+			TITLE = Jsoup.clean(TITLE, Whitelist.none()); // remove tags if any found
 			// get description ------------------------------------------------------------------
-			String description = "no description";
-			html_string = Jsoup.clean(html_string, Whitelist.none());
+			String description = "no description"; // set value to no description in case of no sentence found
+			html_string = Jsoup.clean(html_string, Whitelist.none()); // remove tags first
 			//html_string = html_string.toLowerCase();
 			description = get_description(html_string,htmldoc);
 //			
@@ -388,9 +394,9 @@ public class HomeController {
 			
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 400)
+			if(description.length() > 500)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 399));
+				json_doc.append("DESCRIPTION",description.substring(0, 499));
 			}
 			else
 			{
@@ -403,10 +409,305 @@ public class HomeController {
 		}
 		long end = System.currentTimeMillis();
 		long elapsedTime = end - start;
-		//System.out.println("Time of "+count_urls+" documents = "+elapsedTime);
+		System.out.println("Time of "+count_urls+" documents = "+elapsedTime);
+		System.out.println(JSON_Data);
 		return JSON_Data;
 	}
-	
+	// retreive query from database 
+		public HashMap<String,ArrayList<Document>> Query_Process (String query)
+		{
+			
+			ArrayList<String> string_array = Indexer.Remove_tags(query);
+			string_array = Indexer.Remove_Stop_Words(string_array);
+			string_array = Indexer.Stemming(string_array);
+			MongoDatabase indexerdb = get_database("Search_index", "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
+			MongoCollection<Document> indexercol = get_collection(indexerdb, "invertedfile");
+			//number_documents = Indexer.countUniqueDoc(indexercol);
+			TotalPages = Indexer.countUniqueDoc(indexercol);
+			System.out.println("TotalPages = "+TotalPages);
+			//HashMap<String,ArrayList<Document>> DocLists = new HashMap<String,ArrayList<Document>>();
+			HashMap<String,ArrayList<Document>> DocLists = new LinkedHashMap<String,ArrayList<Document>>();
+			//System.out.println(string_array.size());
+			for(int i=0;i<string_array.size();i++)
+			{
+				//System.out.println("no Error sabry");
+				if(!DocLists.containsKey(string_array.get(i)))
+				{
+					
+				
+					FindIterable<Document> iterDoc = indexercol.find(Filters.eq("Word",string_array.get(i)));
+					MongoCursor<Document> it = iterDoc.iterator();
+					//System.out.println("no Error sabry");
+					while(it.hasNext())
+					{
+						Document doc = it.next();
+						
+						if(doc == null)
+						{
+							//System.out.println("Error sabry");
+						}
+						if(DocLists.get(string_array.get(i)) == null)
+						{
+							ArrayList<Document> list = new ArrayList<Document>();
+							list.add(doc);
+							DocLists.put(string_array.get(i), list);
+							//urls.add(doc.getString("DOC_ID"));
+						}
+						else
+						{
+							ArrayList<Document> list = DocLists.get(string_array.get(i));
+							list.add(doc);
+							DocLists.put(string_array.get(i), list);
+							//urls.add(doc.getString("DOC_ID"));
+						}
+
+					}
+					
+				}
+				else
+				{
+					
+				}
+			}
+			return DocLists;
+		}
+	public String get_parts(String s1,String searchword,int size_before_after)
+	{
+		String description2 = "";
+		int indexof_str = s1.toLowerCase().indexOf(searchword.toLowerCase());
+		
+		if(indexof_str !=-1)
+		{
+			//found.
+			if(!is_phrase)
+			{
+				for(int i=0;i<Copy_String_list.size();i++)
+				{
+					s1 = s1.toLowerCase().replaceAll(Copy_String_list.get(i).toLowerCase()+" ",
+							" <strong style=\" color:yellow\">"+Copy_String_list.get(i).toLowerCase()+"</strong> ");
+				}
+			}
+			else
+			{
+				s1 = s1.toLowerCase().replaceAll(searchword," <strong style=\" color:yellow\">"+searchword+"</strong> ");
+			}
+			int startofsentence = s1.substring(0,indexof_str).lastIndexOf("   ");
+			int endofsentence = s1.substring(indexof_str).indexOf("   ");
+			System.out.println("start of sentence "+startofsentence);
+			System.out.println("start of query "+indexof_str);
+			System.out.println("end of sentence "+endofsentence);
+			if(startofsentence == -1)
+			{
+				if(indexof_str-size_before_after >0)
+				{
+					description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+					try {
+						description2 = description2.substring(description2.indexOf(" "));
+					}
+					catch (Exception e)
+					{
+						
+					}
+						
+				}
+				else
+				{
+					description2 = s1.substring(0,indexof_str);
+				}
+				
+			}
+			else
+			{
+				if(startofsentence < indexof_str-size_before_after)
+				{
+					
+					// need to start from full word
+					description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+					try {
+						description2 = description2.substring(description2.indexOf(" "));
+					}
+					catch (Exception e)
+					{
+						
+					}
+				}
+				else
+				{
+					description2 = s1.substring(startofsentence,indexof_str);
+				}
+				
+			}
+			if(endofsentence == -1)
+			{
+				if(size_before_after+indexof_str < s1.length())
+				{
+					description2 += s1.substring(indexof_str,indexof_str+size_before_after);
+					try {
+						description2 = description2.substring(0,description2.lastIndexOf(" "));
+					}
+					catch (Exception e)
+					{
+						
+					}
+				}
+				else
+				{
+					description2 += s1.substring(indexof_str);
+				}
+				
+			}
+			else
+			{
+				if(endofsentence > indexof_str+size_before_after)
+				{
+					description2 += s1.substring(indexof_str,indexof_str+size_before_after);
+					try {
+						description2 = description2.substring(0,description2.lastIndexOf(" "));
+					}
+					catch (Exception e)
+					{
+						
+					}
+				}
+				else
+				{
+					description2 += s1.substring(indexof_str,indexof_str+endofsentence);	
+				}
+			}
+			
+//			int len_query = searchword.length();
+//			if(indexof_str -size_before_after >0)
+//			{
+//				//description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+//				//description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+//				//description2 +="<strong>" ;	
+//				
+//			}
+//			else
+//			{
+//				description2 = s1.substring(0,indexof_str);
+//				description2 +="<strong>" ;	
+//			}
+//			if(indexof_str+len_query +size_before_after <s1.length())
+//			{
+//				
+//				description2 += s1.substring(indexof_str,indexof_str+len_query);
+//				description2 +="</strong>" ;
+//				description2 += s1.substring(indexof_str+len_query,indexof_str+len_query+size_before_after);
+//				
+//			}
+//			else
+//			{
+//				//description2 += s1.substring(len_query);
+//				description2 += s1.substring(indexof_str,indexof_str+len_query);
+//				//description += s1.substring(indexof_str,indexof_str+len_query);
+//				description2 +="</strong>" ;
+//				description2 += s1.substring(indexof_str+len_query);
+//	
+//			}		
+		}
+		return description2;
+	}
+	public String get_description(String html_string,org.jsoup.nodes.Document htmldoc)
+	{
+		String description = "";
+
+		if(is_phrase)
+		{
+			// get phrase quotation-------------------------------------------------------
+			description = get_parts(html_string, last_query.toLowerCase(), 200);
+			
+			System.out.println("Phrase = "+description);
+		}
+		else
+		{	
+			// get other descriptions------------------------------------------------------------------
+			description = "";
+			int lengthofdescription = 200/Copy_String_list.size();
+			for(int j =0;j<Copy_String_list.size();j++)
+			{
+				description += get_parts(html_string, Copy_String_list.get(j).toLowerCase()+" ", lengthofdescription);
+				if(description.length() > 500)
+				{
+					break;
+				}
+//				Elements headers = htmldoc.select("h1");
+//				for (Element sentence : headers) {
+////					if(sentence.text().contains(Copy_String_list.get(j)))
+////					{
+////						
+////					}
+//					description += get_parts(sentence.text(), Copy_String_list.get(j)+" ", sentence.text().length()/2)+". ";
+//					if(description.length() > 500)
+//					{
+//						break;
+//					}
+//				}
+//				if(description.length() > 500)
+//				{
+//					break;
+//				}
+//				Elements paragraphs = htmldoc.select("body");
+//				for (Element sentence : paragraphs) {
+//					description += get_parts(sentence.text(), Copy_String_list.get(j)+" ",sentence.text().length()/2)+". ";
+//					if(description.length() > 500)
+//					{
+//						break;
+//					}
+//				}
+				// check headers & paragraphs
+//				if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h1 = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h1= Jsoup.clean(tag_h1, Whitelist.none());
+//					description += get_parts(tag_h1, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h2 = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h2= Jsoup.clean(tag_h2, Whitelist.none());
+//					description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h3 = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h3= Jsoup.clean(tag_h3, Whitelist.none());
+//					description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h4 = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h4= Jsoup.clean(tag_h4, Whitelist.none());
+//					description += get_parts(tag_h4, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_h5 = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//					tag_h5= Jsoup.clean(tag_h5, Whitelist.none());
+//					description += get_parts(tag_h5, Copy_String_list.get(j), lengthofdescription, found);
+//					break;
+//				}
+//				else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//				{
+//					String tag_body = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString();
+//					//System.out.println("tagbody : "+tag_body);
+//					tag_body= Jsoup.clean(tag_body, Whitelist.none());
+//					description += get_parts(tag_body, Copy_String_list.get(j), lengthofdescription, found);
+//					System.out.println("body : "+description);
+//					System.out.println("word : "+Copy_String_list.get(j));
+//					break;
+//				}
+				
+			}
+		}
+		System.out.println("Description : "+description);
+		return description;
+	}
+
 	@GetMapping(value="/page/{page_number}")
 	public ArrayList<Document> Pagination(@PathVariable String page_number)
 	{
@@ -430,14 +731,10 @@ public class HomeController {
 		{
 			long start_1 = System.currentTimeMillis();
 			// get data of url
-			long start_jsoup = System.currentTimeMillis();
-
 			String html_string = get_html(urls.get(i));
-			html_string = html_string.trim().replaceAll("\\s{2,}", " ");
-			html_string = html_string.toLowerCase();
+			html_string = html_string.trim().replaceAll("\\s{5,}", "   ");
+			//html_string = html_string.toLowerCase();
 			org.jsoup.nodes.Document htmldoc = Jsoup.parse(html_string);
-			long end_jsoup = System.currentTimeMillis();
-			System.out.println("Time of Database = "+(end_jsoup-start_jsoup));
 			// get document title
 			//get title --------------------------------------------------------------------------
 			Elements temp_TITLE= htmldoc.select("meta");
@@ -452,22 +749,46 @@ public class HomeController {
 					if(Tempstr.toLowerCase().contains(last_query.toLowerCase()))
 					{
 						TITLE = Tempstr;
-						if(TITLE.length()>70)
+						if(TITLE.length()>100)
 						{
-							TITLE = TITLE.substring(0,70);	
+							TITLE = TITLE.substring(0,100);	
+							int lastindex = TITLE.lastIndexOf(" ");
+							if(lastindex !=-1)
+							{
+								TITLE = TITLE.substring(0,lastindex);
+								TITLE +="...";
+							}
+							
 						}
+						
 						System.out.println("Found TITLE as phrase");
 						found_title = true;
 					}
-					for(int k=0;k<Copy_String_list.size();k++)
+					else
 					{
-						if(Tempstr.toLowerCase().contains(Copy_String_list.get(k).toLowerCase()+" "))
+						
+						for(int k=0;k<Copy_String_list.size();k++)
 						{
-							TITLE = Tempstr;
-							if(TITLE.length()>70)
+							if(Tempstr.toLowerCase().contains(Copy_String_list.get(k).toLowerCase()+" "))
 							{
-								TITLE = TITLE.substring(0,70);
+								TITLE = Tempstr;
+								if(TITLE.length()>100)
+								{
+									TITLE = TITLE.substring(0,100);	
+									int lastindex = TITLE.lastIndexOf(" ");
+									if(lastindex !=-1)
+									{
+										TITLE = TITLE.substring(0,lastindex);
+										TITLE +="...";
+									}
+									
+								}
+								found_title = true;
+								break;
 							}
+						}
+						if (found_title)
+						{
 							break;
 						}
 					}
@@ -545,9 +866,9 @@ public class HomeController {
 			}
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 400)
+			if(description.length() > 500)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 399));
+				json_doc.append("DESCRIPTION",description.substring(0, 499));
 			}
 			else
 			{
@@ -555,118 +876,13 @@ public class HomeController {
 			}
 			JSON_Data.add(json_doc);
 			long end_1 = System.currentTimeMillis();
-			//System.out.println("Time of 1 documents = "+(end_1-start_1));
+			System.out.println("Time of 1 documents = "+(end_1-start_1));
 			}
+		System.out.println(JSON_Data);
 		return JSON_Data;
 	}
 	
-	public String get_parts(String s1,String searchword,int size_before_after)
-	{
-		String description2 = "";
-		int indexof_str = s1.toLowerCase().indexOf(searchword);
-		
-		if(indexof_str !=-1)
-		{
-			//found.
-			int len_query = searchword.length();
-			if(indexof_str -size_before_after >0)
-			{
-				description2 = s1.substring(indexof_str-size_before_after,indexof_str);
-				description2 +="<strong>" ;	
-			}
-			else
-			{
-				description2 = s1.substring(0,indexof_str);
-				description2 +="<strong>" ;	
-			}
-			if(indexof_str+len_query +size_before_after <s1.length())
-			{
-				
-				description2 += s1.substring(indexof_str,indexof_str+len_query);
-				description2 +="</strong>" ;
-				description2 += s1.substring(indexof_str+len_query,indexof_str+len_query+size_before_after);
-				
-			}
-			else
-			{
-				description2 += s1.substring(indexof_str);
-				//description += s1.substring(indexof_str,indexof_str+len_query);
-				description2 +="</strong>" ;
-	
-			}		
-		}
-		return description2;
-	}
-	public String get_description(String html_string,org.jsoup.nodes.Document htmldoc)
-	{
-		String description = "";
 
-		if(is_phrase)
-		{
-			// get phrase quotation-------------------------------------------------------
-			description = get_parts(html_string, last_query.toLowerCase(), 200);
-			
-			System.out.println("Phrase = "+description);
-		}
-		else
-		{	
-			// get other descriptions------------------------------------------------------------------
-			description = "";
-			int lengthofdescription = 50;
-			for(int j =0;j<Copy_String_list.size();j++)
-			{
-				description += get_parts(html_string, Copy_String_list.get(j).toLowerCase(), lengthofdescription);
-				// check headers & paragraphs
-//				if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
-//				{
-//					String tag_h1 = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
-//					tag_h1= Jsoup.clean(tag_h1, Whitelist.none());
-//					description += get_parts(tag_h1, Copy_String_list.get(j), lengthofdescription, found);
-//					break;
-//				}
-//				else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-//				{
-//					String tag_h2 = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();
-//					tag_h2= Jsoup.clean(tag_h2, Whitelist.none());
-//					description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
-//					break;
-//				}
-//				else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-//				{
-//					String tag_h3 = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-//					tag_h3= Jsoup.clean(tag_h3, Whitelist.none());
-//					description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
-//					break;
-//				}
-//				else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-//				{
-//					String tag_h4 = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-//					tag_h4= Jsoup.clean(tag_h4, Whitelist.none());
-//					description += get_parts(tag_h4, Copy_String_list.get(j), lengthofdescription, found);
-//					break;
-//				}
-//				else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-//				{
-//					String tag_h5 = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-//					tag_h5= Jsoup.clean(tag_h5, Whitelist.none());
-//					description += get_parts(tag_h5, Copy_String_list.get(j), lengthofdescription, found);
-//					break;
-//				}
-//				else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-//				{
-//					String tag_body = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString();
-//					//System.out.println("tagbody : "+tag_body);
-//					tag_body= Jsoup.clean(tag_body, Whitelist.none());
-//					description += get_parts(tag_body, Copy_String_list.get(j), lengthofdescription, found);
-//					System.out.println("body : "+description);
-//					System.out.println("word : "+Copy_String_list.get(j));
-//					break;
-//				}
-				
-			}
-		}
-		return description;
-	}
 	// copy query to save it 
 	public void copy(String query)
 	{
@@ -679,65 +895,7 @@ public class HomeController {
 		}
 		//return string_array;	
 	}
-	// retreive query from database 
-	public HashMap<String,ArrayList<Document>> Query_Process (String query)
-	{
-		
-		ArrayList<String> string_array = Indexer.Remove_tags(query);
-		string_array = Indexer.Remove_Stop_Words(string_array);
-		string_array = Indexer.Stemming(string_array);
-		MongoDatabase indexerdb = get_database("Search_index", "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
-		MongoCollection<Document> indexercol = get_collection(indexerdb, "invertedfile");
-		//number_documents = Indexer.countUniqueDoc(indexercol);
-		TotalPages = Indexer.countUniqueDoc(indexercol);
-		System.out.println("TotalPages = "+TotalPages);
-		//HashMap<String,ArrayList<Document>> DocLists = new HashMap<String,ArrayList<Document>>();
-		HashMap<String,ArrayList<Document>> DocLists = new LinkedHashMap<String,ArrayList<Document>>();
-		//System.out.println(string_array.size());
-		for(int i=0;i<string_array.size();i++)
-		{
-			//System.out.println("no Error sabry");
-			if(!DocLists.containsKey(string_array.get(i)))
-			{
-				
-			
-				FindIterable<Document> iterDoc = indexercol.find(Filters.eq("Word",string_array.get(i)));
-				MongoCursor<Document> it = iterDoc.iterator();
-				//System.out.println("no Error sabry");
-				while(it.hasNext())
-				{
-					Document doc = it.next();
-					
-					if(doc == null)
-					{
-						//System.out.println("Error sabry");
-					}
-					if(DocLists.get(string_array.get(i)) == null)
-					{
-						ArrayList<Document> list = new ArrayList<Document>();
-						list.add(doc);
-						DocLists.put(string_array.get(i), list);
-						//urls.add(doc.getString("DOC_ID"));
-					}
-					else
-					{
-						ArrayList<Document> list = DocLists.get(string_array.get(i));
-						list.add(doc);
-						DocLists.put(string_array.get(i), list);
-						//urls.add(doc.getString("DOC_ID"));
-					}
-
-				}
-				
-			}
-			else
-			{
-				
-			}
-		}
-		return DocLists;
-	}
-	// Ranker Code 
+		// Ranker Code 
 	public static double IDF()
 	{
 		return Math.log10((double)TotalPages/docs.size());

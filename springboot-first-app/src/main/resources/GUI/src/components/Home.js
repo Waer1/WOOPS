@@ -1,5 +1,6 @@
 import React from "react";
 import SearchField from "./SearchField.js";
+import "./../App.css"
 
 const Home = (props) => {
 
@@ -9,10 +10,9 @@ const Home = (props) => {
   };
 
   return (
-    <div className="home">
+    <div className="home lightning">
       <div className="home__container">
         <div className="home__logo">
-          <img src="/images/googleLogo.png" alt="Logo" />
         </div>
         <SearchField search={searchGoogle} />
       </div>
@@ -22,3 +22,7 @@ const Home = (props) => {
 };
 
 export default Home;
+/*
+          <img src={require("../images/vectorpaint.svg")} alt="Logo" />
+
+*/ 

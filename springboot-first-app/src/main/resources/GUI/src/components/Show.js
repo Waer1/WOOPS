@@ -7,12 +7,11 @@ const Show = (props) => {
   value.shift();
   return (
     <div className="show">
-      
       {value.length > 0
         ? value.map((result) => (
             <div key={Math.random(0,5000)} className="show__details">
               <div className="show__link">
-                <a href={result.TITLE}>{result.TITLE}</a>
+                <a href={result.URL}>{result.TITLE}</a>
               </div>
               <div className="show__title">
                 <a href={result.URL}>{result.URL}</a>
@@ -28,7 +27,3 @@ const Show = (props) => {
 };
 
 export default Show;
-
-/*
-<p>{parse(result.DESCRIPTION)}</p>
-*/

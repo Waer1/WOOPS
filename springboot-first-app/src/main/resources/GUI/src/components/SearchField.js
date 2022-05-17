@@ -2,7 +2,7 @@ import React, {useState, useEffect} from "react";
 import axios from "axios";
 import { FaSistrix } from "react-icons/fa";
 import { TiMediaRecordOutline, TiMediaRecord } from "react-icons/ti";
-
+import "./../App.css"
 
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition
@@ -13,30 +13,36 @@ mic.interimResults = true
 mic.lang = 'en-US'
 
 
-
 const SearchField = (props) => {
 
 
-  const [wordEntered, setWordEntered] = useState("");
+  const [wordEntered, setWordEntered] = useState(props.intialtext);
   const [filteredData, setFilteredData] = useState([]);
   const [isListening, setIsListening] = useState(0)
+  const [Foucsed, setFoucsed] = useState(0);
+
 
 
   const searchGoogle = (e) => {
     e.preventDefault();
     props.search(wordEntered);
-    
   };
+  const clickonchose = (e) => {
+    props.search(e);
+  };
+
   const notrecord =  <TiMediaRecordOutline className="microphone"  onClick={() => setIsListening(1)} />;
   const record = <TiMediaRecord className="microphone"  onClick={() => setIsListening(0)} />;
 
 
   const getliklysearches = async(e) =>{
+    setFoucsed(1);
     setWordEntered(e.target.value); 
     const searchWord = e.target.value;
     setWordEntered(searchWord);
     if (searchWord === "") {
       setFilteredData([]);
+      setFoucsed(0);
     } else {
         connectandset(searchWord);
       }
@@ -86,7 +92,14 @@ const SearchField = (props) => {
     }
   }, [isListening])
 
-  
+  const If = ({ condition, children }) => {
+    if (condition) {
+      return children;
+    }else{
+      return <></>
+    }
+  };
+
 
 
 
@@ -95,25 +108,25 @@ const SearchField = (props) => {
           <input
             type="text"
             placeholder="search..."
-            className="home__input"
+            className={!Foucsed ? "home__input" : "home__input withoutborder"}
             onChange={getliklysearches}
             value={wordEntered}
             required
             autofocus
+            onFocus={()=>{wordEntered !== props.intialtext ? setFoucsed(1) :setFoucsed(0); }}
+            //onBlur={() => setFoucsed(0)}
           />
-          
-        {filteredData.length !== 0 && (
+          <If condition={filteredData.length !== 0 && Foucsed}>
         <div className="dataResult">
-          {filteredData.slice(0, 15).map((value, key) => {
+          {Foucsed && filteredData.slice(0, 15).map((value, key) => {
             return (
-              <a key={Math.random(0,5000)} className="dataItem" href={value.link} onClick={() =>{ setWordEntered(value);} }>
+              <a key={Math.random(0,5000)} className="dataItem" href={value.link} onClick={() =>{ setWordEntered(value); clickonchose(value)} }>
                 <p>{value}</p>
               </a>
             );
           })}
         </div>
-        )}
-
+          </If>
           <div className="home__group">
             <input type="submit" className="home__btn" value="Google Search" />
             <button  className="clear__btn" onClick={() =>{setWordEntered("")} }>Clear Search</button>

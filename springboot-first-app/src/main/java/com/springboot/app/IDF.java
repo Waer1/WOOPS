@@ -3,6 +3,8 @@ package com.springboot.app;
 import java.util.HashMap;
 
 import org.bson.Document;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Whitelist;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
@@ -29,13 +31,27 @@ public class IDF {
 		
 		//MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
 		//MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
-		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);	
-		MongoCollection<Document> indexercol = get_collection(Indexerdb,"invertedfile");
+		MongoDatabase Indexerdb = get_database("Test_suggestion", indexer_database_connection);	
+		MongoCollection<Document> indexercol = get_collection(Indexerdb,"testquotes");
 		//MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
 		//MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
 		//System.out.println(indexercol.countDocuments(Filters.eq("Word","scot")));
-		FindIterable<Document> iterDoc = indexercol.find(Filters.eq("IDF",1));
-		MongoCursor<Document> it = iterDoc.iterator();
+//		String s1 = "\"name\"";
+//		Document doc1 = new Document("ahmed",s1);
+//		indexercol.insertOne(doc1);
+//		FindIterable<Document> iterDoc = indexercol.find(Filters.eq("ahmed",s1));
+//		MongoCursor<Document> it = iterDoc.iterator();
+//		if(it.hasNext())
+//		{
+//			doc1 = it.next();
+//			System.out.println(doc1.getString("ahmed"));
+//		}
+		String html = "<!doctype html> <html> <body bgcolor='#f0f0f0' align='center'> shit "
+        		+"<h1>ahmed <div ahmed> <p> sabry </p></div></h1>"+"  </body></html>";
+		org.jsoup.nodes.Document doc = Jsoup.parse(html);
+		//System.out.println(Jsoup.clean(html, Whitelist.none()));
+		//System.out.println(doc.text());
+	       
 //		DistinctIterable<String> doc = crawlercol.distinct("link", String.class);
 //		MongoCursor<String> results = doc.iterator();
 //		int count =0 ;
@@ -48,43 +64,43 @@ public class IDF {
 		//System.out.println("count = "+count);
 		//int counter =(int)indexercol.countDocuments(Filters.eq("DOC_ID",word));
 		
-		int counter =0 ;
-		while(it.hasNext())
-		{
-			
-			//iterDoc = indexercol.find(Filters.eq("IDF",1));
-			//it = iterDoc.iterator();
-			if(!it.hasNext())
-			{
-				break;
-			}
-			Document doc = it.next();
-			String word = doc.getString("Word");
-			if (MetaData.get(word) == null) {
-				MetaData.put(word, 1);
-			} else
-			{
-				int count = (int)indexercol.countDocuments(Filters.eq("Word",word));
-				indexercol.updateMany(Filters.eq("Word",word), Updates.set("IDF", count));
-				
-				
-				System.out.println("count "+counter);
-			}
-			counter++;
-;
-		}
+//		int counter =0 ;
+//		while(it.hasNext())
+//		{
+//			
+//			//iterDoc = indexercol.find(Filters.eq("IDF",1));
+//			//it = iterDoc.iterator();
+//			if(!it.hasNext())
+//			{
+//				break;
+//			}
+//			Document doc = it.next();
+//			String word = doc.getString("Word");
+//			if (MetaData.get(word) == null) {
+//				MetaData.put(word, 1);
+//			} else
+//			{
+//				int count = (int)indexercol.countDocuments(Filters.eq("Word",word));
+//				indexercol.updateMany(Filters.eq("Word",word), Updates.set("IDF", count));
+//				
+//				
+//				System.out.println("count "+counter);
+//			}
+//			counter++;
+//;
+//		}
 	}
 	public static MongoDatabase get_database(String databasename, String connection) {
 
-		// MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-		// MongoDatabase db = mongoClient2.getDatabase(databasename);
-		// return db;
+		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
+		 MongoDatabase db = mongoClient2.getDatabase(databasename);
+		 return db;
 
-		ConnectionString connectionString = new ConnectionString(connection);
-		MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connectionString).build();
-		MongoClient mongoClient = MongoClients.create(settings);
-		MongoDatabase database = mongoClient.getDatabase(databasename);
-		return database;
+//		ConnectionString connectionString = new ConnectionString(connection);
+//		MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connectionString).build();
+//		MongoClient mongoClient = MongoClients.create(settings);
+//		MongoDatabase database = mongoClient.getDatabase(databasename);
+//		return database;
 	}
 
 	// function get collection from database
