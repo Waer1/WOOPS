@@ -34,41 +34,44 @@ public class IDF {
 		
 		//MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
 		//MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
-		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);	
-		MongoCollection<Document> indexercol = get_collection(Indexerdb,"invertedfile");
-		
+		MongoDatabase Indexerdb = get_database("Crawler", indexer_database_connection);	
+		MongoCollection<Document> indexercol = get_collection(Indexerdb,"Crawler");
+		url_inverted(indexercol);
 		//MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
 		//MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
 		//System.out.println(indexercol.countDocuments(Filters.eq("Word","scot")));
 //		String s1 = "\"name\"";
-//		Document doc1 = new Document("ahmed",s1);
+		Document doc1 = null;
 //		indexercol.insertOne(doc1);
-		FindIterable<Document> iterDoc = indexercol.find(Filters.eq("DOC_ID","https://www.javatpoint.com/java-main-method")).sort(ascending("Word"));
-		MongoCursor<Document> it = iterDoc.iterator();
-//		if(it.hasNext())
+//		FindIterable<Document> iterDoc = indexercol.find();
+//		MongoCursor<Document> it = iterDoc.iterator();
+//		int count =0;
+//		while(it.hasNext())
 //		{
+//			count++;
 //			doc1 = it.next();
-//			System.out.println(doc1.getString("ahmed"));
+//			System.out.println("url = "+doc1.getString("Url")+" popularity = "+doc1.getInteger("popularity"));
 //		}
-		String html = "<!doctype html> <html> <body bgcolor='#f0f0f0' align='center'> shit "
-        		+"<h1>ahmed <div ahmed> <p> sabry </p></div></h1>"+"  </body></html>";
-		int count =0;
-		while(it.hasNext())
-		{
-//			if(count++ >200)
-//			{
-//				break;
-//			}
-			Document db_doc = it.next();
-			//org.jsoup.nodes.Document doc = null;
-			
-			List<Integer> html2 = db_doc.getList("POSITION",Integer.class);
-			//html2 = Jsoup.clean(html2, Whitelist.none());
-			//if(db_doc.getString("Word") == "jvm" || db_doc.getString("Word") == "execut" || db_doc.getString("Word") == "static" || db_doc.getString("Word") == "block")
-			System.out.println("word : "+db_doc.getString("Word") );
-			System.out.println("positions : "+html2);
-			
-		}
+//		System.out.println("Count urls = "+count);
+//		String html = "<!doctype html> <html> <body bgcolor='#f0f0f0' align='center'> shit "
+//        		+"<h1>ahmed <div ahmed> <p> sabry </p></div></h1>"+"  </body></html>";
+//		int count =0;
+//		while(it.hasNext())
+//		{
+////			if(count++ >200)
+////			{
+////				break;
+////			}
+//			Document db_doc = it.next();
+//			//org.jsoup.nodes.Document doc = null;
+//			
+//			List<Integer> html2 = db_doc.getList("POSITION",Integer.class);
+//			//html2 = Jsoup.clean(html2, Whitelist.none());
+//			//if(db_doc.getString("Word") == "jvm" || db_doc.getString("Word") == "execut" || db_doc.getString("Word") == "static" || db_doc.getString("Word") == "block")
+//			System.out.println("word : "+db_doc.getString("Word") );
+//			System.out.println("positions : "+html2);
+//			
+//		}
 		
 	
 		
@@ -133,6 +136,25 @@ public class IDF {
 
 		MongoCollection<Document> col = db.getCollection(Collection_Name);
 		return col;
+	}
+	public static HashMap<String,Integer> url_inverted(MongoCollection<Document> col)
+	{
+		HashMap<String,Integer> url_indexer = new HashMap<String, Integer>();
+		DistinctIterable<String> doc = col.distinct("DOC_ID", String.class);
+		MongoCursor<String> unique_urls = doc.iterator();
+		int count =0;
+
+			while(unique_urls.hasNext())
+			{
+				count++;
+				String str = unique_urls.next();
+				System.out.println(str);
+				url_indexer.put(str, 1);
+			}
+
+
+		//System.out.println("Count unique docs = "+count);
+		return url_indexer;
 	}
 
 }

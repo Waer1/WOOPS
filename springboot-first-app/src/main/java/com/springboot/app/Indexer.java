@@ -56,7 +56,6 @@ public class Indexer {
 		System.out.println("Hello");
 		
 		run_indexer();
-		
 		// ---------------------------------------------------------------
 		// what to do
 		// 1) get a documents from database
@@ -81,12 +80,14 @@ public class Indexer {
 		MongoCursor<Document> it = iterDoc.iterator();
 		//Document doc = it.next();
 		//System.out.println(doc);
-		
+
 		// ------------------------------ get collection of documents & size
 
 		// ------------------------------- loop on documents
 		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
 		MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
+		indexercol.drop();
+		indexercol = get_collection(Indexerdb, "invertedfile");
 		setindexes(indexercol);
 		boolean stop_indexeing = false;
 		for (int i = 0; i < size_Docs; i++) {
@@ -108,7 +109,7 @@ public class Indexer {
 			
 			if(canfetch)
 			{
-				delete_doc_ID(indexercol,htmldoc_ID,0);
+				//delete_doc_ID(indexercol,htmldoc_ID,0);
 	
 				// filter documents
 				// detect tags for ranker

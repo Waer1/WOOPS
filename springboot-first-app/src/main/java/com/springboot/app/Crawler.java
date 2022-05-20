@@ -30,7 +30,7 @@ public class Crawler {
                 }
                 //If connection made successfully store the html code of the page to mongoDB
                 System.out.printf("Done get html from from %s..\n", url);
-                mdb.insert(url, document.outerHtml());
+                mdb.insert(url, document.outerHtml(),1);
                 //Extract All hyperlinks from the Page
                 Elements hyperLinkes = document.select("a[href]");
                 //Store them to a list

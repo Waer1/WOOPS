@@ -21,19 +21,17 @@ public class MongoDB {
         static MongoCollection collection;
         public  void ConnecttoDB()
         {
-//            MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb://localhost:27017"));
-//             mongoClient = new MongoClient();
    		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-   		 MongoDatabase database = mongoClient2.getDatabase("Crawler");
-//                 database = mongoClient.getDatabase("Crawler");
+            database = mongoClient2.getDatabase("Crawler");
                 collection = database.getCollection("Crawler");
         }
 
-        public  void  insert(String url , String html)
+        public  void  insert(String url , String html, int popularity)
         {
             Document document = new Document()
                     .append("Url", url)
-                    .append("html", html);
+                    .append("html", html)
+                    .append("popularity", popularity);
             collection.insertOne(document);
         }
 

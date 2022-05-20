@@ -15,6 +15,7 @@ import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
@@ -417,6 +418,7 @@ public class HomeController {
 			ArrayList<String> string_array = Indexer.Remove_tags(query);
 			string_array = Indexer.Remove_Stop_Words(string_array);
 			string_array = Indexer.Stemming(string_array);
+			//java.util.logging.Logger.getLogger("org.mongodb.driver").setLevel(Level.OFF);
 			MongoDatabase indexerdb = get_database("Search_index", "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority");
 			MongoCollection<Document> indexercol = get_collection(indexerdb, "invertedfile");
 			TotalPages = Indexer.countUniqueDoc(indexercol);
@@ -487,78 +489,7 @@ public class HomeController {
 					if(description.length() > 500)
 					{
 						break;
-					}
-//					Elements headers = htmldoc.select("h1");
-//					for (Element sentence : headers) {
-////						if(sentence.text().contains(Copy_String_list.get(j)))
-////						{
-////							
-////						}
-//						description += get_parts(sentence.text(), Copy_String_list.get(j)+" ", sentence.text().length()/2)+". ";
-//						if(description.length() > 500)
-//						{
-//							break;
-//						}
-//					}
-//					if(description.length() > 500)
-//					{
-//						break;
-//					}
-//					Elements paragraphs = htmldoc.select("body");
-//					for (Element sentence : paragraphs) {
-//						description += get_parts(sentence.text(), Copy_String_list.get(j)+" ",sentence.text().length()/2)+". ";
-//						if(description.length() > 500)
-//						{
-//							break;
-//						}
-//					}
-					// check headers & paragraphs
-//					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String tag_h1 = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
-//						tag_h1= Jsoup.clean(tag_h1, Whitelist.none());
-//						description += get_parts(tag_h1, Copy_String_list.get(j), lengthofdescription, found);
-//						break;
-//					}
-//					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String tag_h2 = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();
-//						tag_h2= Jsoup.clean(tag_h2, Whitelist.none());
-//						description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
-//						break;
-//					}
-//					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String tag_h3 = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-//						tag_h3= Jsoup.clean(tag_h3, Whitelist.none());
-//						description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
-//						break;
-//					}
-//					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String tag_h4 = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-//						tag_h4= Jsoup.clean(tag_h4, Whitelist.none());
-//						description += get_parts(tag_h4, Copy_String_list.get(j), lengthofdescription, found);
-//						break;
-//					}
-//					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String tag_h5 = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-//						tag_h5= Jsoup.clean(tag_h5, Whitelist.none());
-//						description += get_parts(tag_h5, Copy_String_list.get(j), lengthofdescription, found);
-//						break;
-//					}
-//					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String tag_body = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString();
-//						//System.out.println("tagbody : "+tag_body);
-//						tag_body= Jsoup.clean(tag_body, Whitelist.none());
-//						description += get_parts(tag_body, Copy_String_list.get(j), lengthofdescription, found);
-//						System.out.println("body : "+description);
-//						System.out.println("word : "+Copy_String_list.get(j));
-//						break;
-//					}
-					
+					}					
 				}
 			}
 			System.out.println("Description : "+description);
@@ -870,9 +801,9 @@ public class HomeController {
 			}
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 6000)
+			if(description.length() > 600)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 5999));
+				json_doc.append("DESCRIPTION",description.substring(0, 599));
 			}
 			else
 			{
@@ -900,102 +831,31 @@ public class HomeController {
 		//return string_array;	
 	}
 		// Ranker Code 
-	public static double IDF()
-	{
-		return Math.log10((double)TotalPages/docs.size());
-	}
-	
-	public static ArrayList<String> TF_IDF()
-	{	
-			//entry = map.entrySet().iterator().next();
-		for (ArrayList<Document> entry : ReterivedDocuments.values())
-		{	
-			docs = entry;
-			for (Document it : docs)		
-			{
-				//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
-				int title = it.getInteger("Title");
-				int headers = it.getInteger("Headers");
-				int body = it.getInteger("Other");
-				String s = it.getString("DOC_ID");
-				
-				int tf = 10*title + 5*headers + body;
-				//TODO:Calculate the normalized tf
-				Double ntf = 1.0*tf;
-				
-				//TODO:Calculate TF*IDF
-				double temp = ntf*IDF();
-				Double d = out.get(s);
-				if (d != null)
-				{
-					temp += d;
-					out.remove(s);
-				}
-				out.put(s, temp);
-			}
-		}
-		// Create a list from elements of HashMap
-        List<Map.Entry<String, Double> > list =
-               new LinkedList<Map.Entry<String, Double> >(out.entrySet());
- 
-        // Sort the list
-        Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
-            public int compare(Map.Entry<String, Double> o1,
-                               Map.Entry<String, Double> o2)
-            {
-                return (o2.getValue()).compareTo(o1.getValue());
-            }
-        });
-         
-        // put data from sorted list to array of strings
-        ArrayList<String> finale = new ArrayList<String>();
-        for (Map.Entry<String, Double> aa : list) {
-            //System.out.println(aa.getKey() + " | " + aa.getValue());
-        	finale.add(aa.getKey());
-        }
-        return finale;
-	}
-	
-	
-//	public static double IDF(int DF)
+//	public static double IDF()
 //	{
-//		return Math.log10((double)TotalPages/DF);
+//		return Math.log10((double)TotalPages/docs.size());
 //	}
-//	
+	
 //	public static ArrayList<String> TF_IDF()
 //	{	
 //			//entry = map.entrySet().iterator().next();
-//		for (ArrayList<Document> entry : map.values())
+//		for (ArrayList<Document> entry : ReterivedDocuments.values())
 //		{	
 //			docs = entry;
 //			for (Document it : docs)		
 //			{
-//				double temp = 0.0;
 //				//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
+//				int title = it.getInteger("Title");
+//				int headers = it.getInteger("Headers");
+//				int body = it.getInteger("Other");
 //				String s = it.getString("DOC_ID");
-//				Double DbNormTF = it.getDouble("TF");
-//				FindIterable<Document> iterDoc2 = rankerColl.find(Filters.eq("Url", s));
 //				
-//				if(DbNormTF < 0.5)
-//				{
-//					int DF = it.getInteger("IDF");
-//					int title = it.getInteger("Title");
-//					int headers = it.getInteger("Headers");
-//					int body = it.getInteger("Other");
-//					int popularity = iterDoc2.first().getInteger("popularity");
-////					List<Integer> pos = it.getList("POSITION", Integer.class);
-////					int firstPosition = pos.get(0);
-//					
-//					int tf = title + headers + body;
-//					Double totalWords = (tf/DbNormTF);
-//					
-//					//TODO:Calculate the normalized tf
-//					Double ntf = (10*title + 5*headers + body)/totalWords;
-//					
-//					//TODO:Calculate TF*IDF
-//					temp = ntf*IDF(DF)*popularity;
-//				}
+//				int tf = 10*title + 5*headers + body;
+//				//TODO:Calculate the normalized tf
+//				Double ntf = 1.0*tf;
 //				
+//				//TODO:Calculate TF*IDF
+//				double temp = ntf*IDF();
 //				Double d = out.get(s);
 //				if (d != null)
 //				{
@@ -1017,16 +877,88 @@ public class HomeController {
 //                return (o2.getValue()).compareTo(o1.getValue());
 //            }
 //        });
-//
 //         
 //        // put data from sorted list to array of strings
 //        ArrayList<String> finale = new ArrayList<String>();
 //        for (Map.Entry<String, Double> aa : list) {
-//            System.out.println(aa.getKey() + " | " + aa.getValue());
+//            //System.out.println(aa.getKey() + " | " + aa.getValue());
 //        	finale.add(aa.getKey());
 //        }
 //        return finale;
 //	}
+//	
+	
+	public static double IDF(int DF)
+	{
+		return Math.log10((double)TotalPages/DF);
+	}
+	
+	public static ArrayList<String> TF_IDF()
+	{	
+			//entry = map.entrySet().iterator().next();
+		for (ArrayList<Document> entry : ReterivedDocuments.values())
+		{	
+			docs = entry;
+			for (Document it : docs)		
+			{
+				double temp = 0.0;
+				//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
+				String s = it.getString("DOC_ID");
+				Double DbNormTF = it.getDouble("TF");
+				//FindIterable<Document> iterDoc2 = rankerColl.find(Filters.eq("Url", s));
+				
+				if(DbNormTF < 0.5)
+				{
+					int DF = it.getInteger("IDF");
+					int title = it.getInteger("Title");
+					int headers = it.getInteger("Headers");
+					int body = it.getInteger("Other");
+					//int popularity = iterDoc2.first().getInteger("popularity");
+//					List<Integer> pos = it.getList("POSITION", Integer.class);
+//					int firstPosition = pos.get(0);
+					
+					int tf = title + headers + body;
+					Double totalWords = (tf/DbNormTF);
+					
+					//TODO:Calculate the normalized tf
+					Double ntf = (10*title + 5*headers + body)/totalWords;
+					
+					//TODO:Calculate TF*IDF
+					//temp = ntf*IDF(DF)*popularity;
+					temp = ntf*IDF(DF);
+				}
+				
+				Double d = out.get(s);
+				if (d != null)
+				{
+					temp += d;
+					out.remove(s);
+				}
+				out.put(s, temp);
+			}
+		}
+		// Create a list from elements of HashMap
+        List<Map.Entry<String, Double> > list =
+               new LinkedList<Map.Entry<String, Double> >(out.entrySet());
+ 
+        // Sort the list
+        Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
+            public int compare(Map.Entry<String, Double> o1,
+                               Map.Entry<String, Double> o2)
+            {
+                return (o2.getValue()).compareTo(o1.getValue());
+            }
+        });
+
+         
+        // put data from sorted list to array of strings
+        ArrayList<String> finale = new ArrayList<String>();
+        for (Map.Entry<String, Double> aa : list) {
+            System.out.println(aa.getKey() + " | " + aa.getValue());
+        	finale.add(aa.getKey());
+        }
+        return finale;
+	}
 	// phrase search
 	
 //public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>myMap){
@@ -1229,8 +1161,28 @@ public class HomeController {
 						{
 							// check for at least 1 lw l2et 
 							// add the URl to the founded
-							URLContainer.add(newMap.getKey());
-							break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
+							//System.out.println("shit");
+							//boolean break_outerloop = false;
+							try
+							{
+								String S1 = get_html(newMap.getKey());
+								S1 = Jsoup.clean(S1, Whitelist.none());
+								int indexof_str = S1.toLowerCase().indexOf(last_query.toLowerCase());
+								if(indexof_str != -1)
+								{
+									System.out.println(indexof_str);
+									URLContainer.add(newMap.getKey());
+									break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
+								} 
+								break;
+							}
+							catch(Exception e)
+							{
+								System.out.println("Error in get index of query in phrase search");
+							}
+							//URLContainer.add(newMap.getKey());
+							//break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
+
 						}
 				}
 			}
@@ -1313,6 +1265,7 @@ public class HomeController {
 		}
 		else
 		{
+			System.out.println("No html");
 			html_doc = "";
 		}
 		return html_doc;
@@ -1351,3 +1304,75 @@ public class HomeController {
 		
 	}
 }
+
+
+//Elements headers = htmldoc.select("h1");
+//for (Element sentence : headers) {
+////	if(sentence.text().contains(Copy_String_list.get(j)))
+////	{
+////		
+////	}
+//	description += get_parts(sentence.text(), Copy_String_list.get(j)+" ", sentence.text().length()/2)+". ";
+//	if(description.length() > 500)
+//	{
+//		break;
+//	}
+//}
+//if(description.length() > 500)
+//{
+//	break;
+//}
+//Elements paragraphs = htmldoc.select("body");
+//for (Element sentence : paragraphs) {
+//	description += get_parts(sentence.text(), Copy_String_list.get(j)+" ",sentence.text().length()/2)+". ";
+//	if(description.length() > 500)
+//	{
+//		break;
+//	}
+//}
+// check headers & paragraphs
+//if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//{
+//	String tag_h1 = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//	tag_h1= Jsoup.clean(tag_h1, Whitelist.none());
+//	description += get_parts(tag_h1, Copy_String_list.get(j), lengthofdescription, found);
+//	break;
+//}
+//else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//{
+//	String tag_h2 = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();
+//	tag_h2= Jsoup.clean(tag_h2, Whitelist.none());
+//	description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
+//	break;
+//}
+//else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//{
+//	String tag_h3 = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//	tag_h3= Jsoup.clean(tag_h3, Whitelist.none());
+//	description += get_parts(html_string, Copy_String_list.get(j), lengthofdescription, found);
+//	break;
+//}
+//else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//{
+//	String tag_h4 = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//	tag_h4= Jsoup.clean(tag_h4, Whitelist.none());
+//	description += get_parts(tag_h4, Copy_String_list.get(j), lengthofdescription, found);
+//	break;
+//}
+//else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//{
+//	String tag_h5 = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//	tag_h5= Jsoup.clean(tag_h5, Whitelist.none());
+//	description += get_parts(tag_h5, Copy_String_list.get(j), lengthofdescription, found);
+//	break;
+//}
+//else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//{
+//	String tag_body = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString();
+//	//System.out.println("tagbody : "+tag_body);
+//	tag_body= Jsoup.clean(tag_body, Whitelist.none());
+//	description += get_parts(tag_body, Copy_String_list.get(j), lengthofdescription, found);
+//	System.out.println("body : "+description);
+//	System.out.println("word : "+Copy_String_list.get(j));
+//	break;
+//}

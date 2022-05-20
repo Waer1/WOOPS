@@ -49,9 +49,10 @@ public class CrawlerMain {
         }
         for (int i = 0; i < numOfThreads; i++) {
             threads[i].join();
+            System.out.println("Theard number: "+i+" returned");
         }
 
-
+        
     }
 
 

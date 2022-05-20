@@ -1,5 +1,12 @@
 package com.springboot.app;
 
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.Updates;
+import com.mongodb.client.result.UpdateResult;
+import org.bson.Document;
+import org.bson.conversions.Bson;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -135,6 +142,23 @@ public class InitializeCrawler implements  Runnable
                        }
                    }
                }
+               Bson filter = Filters.text("url");
+               //mdb.collection.find(filter).forEach(doc -> System.out.println(doc.toJson()));
+               Document tmp = (Document) mdb.collection.find(Filters.eq("Url", url)).first();
+               //tmp.replace("popularity", (int)tmp.get("popularity")+1);
+               //mdb.collection.findOneAndReplace(Filters.eq("popularity"), (int)tmp.get("popularity")+1);
+
+               Document query = new Document().append("Url",  url);
+               try{
+                   Bson updates = Updates.combine(
+                           Updates.set("popularity", tmp.getInteger("popularity")+1));
+                   UpdateOptions options = new UpdateOptions().upsert(true);
+                   UpdateResult result = mdb.collection.updateOne(query, updates, options);
+               }
+               catch (Exception e) {
+
+               }
+
                //Get the urls from queue and delete it
                url = URLsFrontier.remove(0);
                // if the links was empty string or already crawled before , skip it and take another one
