@@ -1,6 +1,8 @@
 package com.springboot.app;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
 import org.bson.Document;
 import org.jsoup.Jsoup;
@@ -17,6 +19,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
+import static com.mongodb.client.model.Sorts.ascending;
 
 public class IDF {
 	
@@ -31,16 +34,17 @@ public class IDF {
 		
 		//MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
 		//MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
-		MongoDatabase Indexerdb = get_database("Test_suggestion", indexer_database_connection);	
-		MongoCollection<Document> indexercol = get_collection(Indexerdb,"testquotes");
+		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);	
+		MongoCollection<Document> indexercol = get_collection(Indexerdb,"invertedfile");
+		
 		//MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
 		//MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
 		//System.out.println(indexercol.countDocuments(Filters.eq("Word","scot")));
 //		String s1 = "\"name\"";
 //		Document doc1 = new Document("ahmed",s1);
 //		indexercol.insertOne(doc1);
-//		FindIterable<Document> iterDoc = indexercol.find(Filters.eq("ahmed",s1));
-//		MongoCursor<Document> it = iterDoc.iterator();
+		FindIterable<Document> iterDoc = indexercol.find(Filters.eq("DOC_ID","https://www.javatpoint.com/java-main-method")).sort(ascending("Word"));
+		MongoCursor<Document> it = iterDoc.iterator();
 //		if(it.hasNext())
 //		{
 //			doc1 = it.next();
@@ -48,7 +52,27 @@ public class IDF {
 //		}
 		String html = "<!doctype html> <html> <body bgcolor='#f0f0f0' align='center'> shit "
         		+"<h1>ahmed <div ahmed> <p> sabry </p></div></h1>"+"  </body></html>";
-		org.jsoup.nodes.Document doc = Jsoup.parse(html);
+		int count =0;
+		while(it.hasNext())
+		{
+//			if(count++ >200)
+//			{
+//				break;
+//			}
+			Document db_doc = it.next();
+			//org.jsoup.nodes.Document doc = null;
+			
+			List<Integer> html2 = db_doc.getList("POSITION",Integer.class);
+			//html2 = Jsoup.clean(html2, Whitelist.none());
+			//if(db_doc.getString("Word") == "jvm" || db_doc.getString("Word") == "execut" || db_doc.getString("Word") == "static" || db_doc.getString("Word") == "block")
+			System.out.println("word : "+db_doc.getString("Word") );
+			System.out.println("positions : "+html2);
+			
+		}
+		
+	
+		
+		
 		//System.out.println(Jsoup.clean(html, Whitelist.none()));
 		//System.out.println(doc.text());
 	       
