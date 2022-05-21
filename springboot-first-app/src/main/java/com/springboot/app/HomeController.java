@@ -68,10 +68,6 @@ public class HomeController {
 	}
 	public static void clear()
 	{
-//		for(int i=Copy_String_list.size();i>0;i--)
-//		{
-//			Copy_String_list.remove(i-1);
-//		}
 		Copy_String_list.clear();
 		urls.clear();
 		no_urls = 0;
@@ -84,17 +80,6 @@ public class HomeController {
 	@GetMapping(value="/suggestion/{query}")
 	public ArrayList<String> test(@PathVariable String query)
 	{	
-		// get connection with queries database
-//		if(query.startsWith("\"") && query.endsWith("\""))
-//		{
-//			query = query.replace("\"", "$");
-//			//query = query.substring(1);
-//		}
-//		else if(query.startsWith("\""))
-//		{
-//			//query = query.substring(1);
-//		}
-		
 		ArrayList<String> suggestion_array = new ArrayList<String>();
 		if(query =="")
 		{
@@ -131,11 +116,7 @@ public class HomeController {
 		if(query.startsWith("\"") && query.endsWith("\"") && query.length()>2)
 		{
 			System.out.println(query);
-			//query = query.substring(0, query.length() - 1);
-			//query = query.substring(1);
-			//query = query.replace("\"", "$");
 			is_phrase = true;
-			//System.out.println("Phrase Search not Ranker : "+query);
 		}
 		
 		//last_query = query;
@@ -196,12 +177,10 @@ public class HomeController {
 		}
 			
 		// call phrase search----------------------------------------------------------------------
-		if (is_phrase)
+		if (is_phrase && Copy_String_list.size()>1)
 		{
-			//ArrayList<String> phrase_urls = new ArrayList<String>();
+			
 			long start_phrase = System.currentTimeMillis();
-
-			//System.out.println("Size words = "+Copy_String_list.size());
 			urls = phraseSearch(ReterivedDocuments);
 			System.out.println("Phrase search: no of phrase urls = "+urls.size());
 			long end_phrase = System.currentTimeMillis();
@@ -209,17 +188,13 @@ public class HomeController {
 			// rank output of urls reterived from phrase search
 			rank_phrase__search_documents();
 		}
-		//else
-		//{
 		// call ranker ----------------------------------------------------------------------------
 		long start_ranker = System.currentTimeMillis();
 		urls = TF_IDF();
 		long end_ranker = System.currentTimeMillis();
 		System.out.println("ranker: Time of ranker = "+(end_ranker-start_ranker));
 		System.out.println("ranker: no of ranker urls = "+urls.size());
-		//}
 
-		//System.out.println("Time of phrase search = "+(end_phrase-start_phrase));
 		
 
 		// merge urls--------------------------------------------------------------------------------
@@ -289,7 +264,6 @@ public class HomeController {
 					}
 					else
 					{
-						
 						for(int k=0;k<Copy_String_list.size();k++)
 						{
 							if(Tempstr.toLowerCase().contains(Copy_String_list.get(k).toLowerCase()+" "))
@@ -304,7 +278,6 @@ public class HomeController {
 										TITLE = TITLE.substring(0,lastindex);
 										TITLE +="...";
 									}
-									
 								}
 								found_title = true;
 								break;
@@ -328,73 +301,15 @@ public class HomeController {
 			html_string = Jsoup.clean(html_string, Whitelist.none()); // remove tags first
 			//html_string = html_string.toLowerCase();
 			description = get_description(html_string,htmldoc);
-//			
-//			int indexof_phrase = html_string.indexOf(query);
-//			if(indexof_phrase !=-1)
-//			{
-//				if(indexof_phrase +100 <html_string.length())
-//				{
-//					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
-//					System.out.println("Description of phrase = "+description);
-//				}
-//				else
-//				{
-//					description = html_string.substring(indexof_phrase);
-//				}		
-//			}
-//			else
-//			{	
-//				for(int j =0;j<Copy_String_list.size();j++)
-//				{
-//					
-//					// check headers & paragraphs
-//					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
-//						
-//						break;
-//					}
-//					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
-//						break;
-//					}
-//					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-//						break;
-//					}
-//					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-//						break;
-//					}
-//					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						String s = new String();
-//						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-//						break;
-//					}
-//					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
-//						System.out.println("body");
-//						break;
-//					}
-//				}
-//			}
-//			description = Jsoup.clean(description, Whitelist.none());
-//			
-			//description = doc.select("p:contains("+"dagbanli"+")").toString();
-			//description = doc.select("p:first-of-type").toString();
-			//System.out.println("Des: "+description);
-			//description = doc.select("free").toString();
-			
+			if (description =="")
+			{
+				description = "no description";
+			}
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 600)
+			if(description.length() > 1000)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 599));
+				json_doc.append("DESCRIPTION",description.substring(0, 999));
 			}
 			else
 			{
@@ -411,6 +326,7 @@ public class HomeController {
 		System.out.println(JSON_Data);
 		return JSON_Data;
 	}
+	
 	// retreive query from database ----------------------------------------------------------------
 		public HashMap<String,ArrayList<Document>> Query_Process (String query)
 		{
@@ -437,7 +353,6 @@ public class HomeController {
 						Document doc = it.next();
 						if(doc == null)
 						{
-							//System.out.println("Error sabry");
 						}
 						if(DocLists.get(string_array.get(i)) == null)
 						{
@@ -602,36 +517,6 @@ public class HomeController {
 				}
 			}
 			
-//			int len_query = searchword.length();
-//			if(indexof_str -size_before_after >0)
-//			{
-//				//description2 = s1.substring(indexof_str-size_before_after,indexof_str);
-//				//description2 = s1.substring(indexof_str-size_before_after,indexof_str);
-//				//description2 +="<strong>" ;	
-//				
-//			}
-//			else
-//			{
-//				description2 = s1.substring(0,indexof_str);
-//				description2 +="<strong>" ;	
-//			}
-//			if(indexof_str+len_query +size_before_after <s1.length())
-//			{
-//				
-//				description2 += s1.substring(indexof_str,indexof_str+len_query);
-//				description2 +="</strong>" ;
-//				description2 += s1.substring(indexof_str+len_query,indexof_str+len_query+size_before_after);
-//				
-//			}
-//			else
-//			{
-//				//description2 += s1.substring(len_query);
-//				description2 += s1.substring(indexof_str,indexof_str+len_query);
-//				//description += s1.substring(indexof_str,indexof_str+len_query);
-//				description2 +="</strong>" ;
-//				description2 += s1.substring(indexof_str+len_query);
-//	
-//			}		
 		}
 		if(is_phrase)
 		{
@@ -643,7 +528,7 @@ public class HomeController {
 		}
 		return description2;
 	}
-		@GetMapping(value="/page/{page_number}")
+	@GetMapping(value="/page/{page_number}")
 	public ArrayList<Document> Pagination(@PathVariable String page_number)
 	{
 		ArrayList<Document> JSON_Data = new ArrayList<Document>();
@@ -740,70 +625,15 @@ public class HomeController {
 			String description = "no description";
 			html_string = Jsoup.clean(html_string, Whitelist.none());
 			description = get_description(html_string,htmldoc);
-//			int indexof_phrase = html_string.indexOf(last_query);
-//			if(indexof_phrase !=-1)
-//			{
-//				if(indexof_phrase +100 <html_string.length())
-//				{
-//					description = html_string.substring(indexof_phrase,indexof_phrase+100);	
-//				}
-//				else
-//				{
-//					description = html_string.substring(indexof_phrase);
-//				}		
-//			}
-//			else
-//			{	
-//				for(int j =0;j<Copy_String_list.size();j++)
-//				{
-//					//System.out.println("S"+j+Copy_String_list.get(j));
-//					// check headers & paragraphs
-//					if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
-//						
-//						break;
-//					}
-//					else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
-//						break;
-//					}
-//					else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
-//						break;
-//					}
-//					else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
-//						break;
-//					}
-//					else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
-//						break;
-//					}
-//					else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
-//					{
-//						description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
-//						System.out.println("body");
-//						break;
-//					}
-//				}
-//			}
-//			description = Jsoup.clean(description, Whitelist.none());
-			//description.indexOf(query);
-			
 			if (description =="")
 			{
-				description = TITLE;
+				description = "no description";
 			}
 			Document json_doc  = new Document("URL",urls.get(i));
 			json_doc.append("TITLE",TITLE);
-			if(description.length() > 600)
+			if(description.length() > 1000)
 			{
-				json_doc.append("DESCRIPTION",description.substring(0, 599));
+				json_doc.append("DESCRIPTION",description.substring(0, 999));
 			}
 			else
 			{
@@ -828,65 +658,74 @@ public class HomeController {
 		{
 			Copy_String_list.add(string_array.get(i));
 		}
-		//return string_array;	
 	}
-		// Ranker Code 
-//	public static double IDF()
-//	{
-//		return Math.log10((double)TotalPages/docs.size());
-//	}
+	public MongoDatabase get_database(String databasename, String connection) {
+
+		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
+		 MongoDatabase db = mongoClient2.getDatabase(databasename);
+		 return db;
+	}
+
+	// function get collection from database
+	public  MongoCollection<Document> get_collection(MongoDatabase db, String Collection_Name) {
+
+		MongoCollection<Document> col = db.getCollection(Collection_Name);
+		return col;
+	}
 	
-//	public static ArrayList<String> TF_IDF()
-//	{	
-//			//entry = map.entrySet().iterator().next();
-//		for (ArrayList<Document> entry : ReterivedDocuments.values())
-//		{	
-//			docs = entry;
-//			for (Document it : docs)		
-//			{
-//				//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
-//				int title = it.getInteger("Title");
-//				int headers = it.getInteger("Headers");
-//				int body = it.getInteger("Other");
-//				String s = it.getString("DOC_ID");
-//				
-//				int tf = 10*title + 5*headers + body;
-//				//TODO:Calculate the normalized tf
-//				Double ntf = 1.0*tf;
-//				
-//				//TODO:Calculate TF*IDF
-//				double temp = ntf*IDF();
-//				Double d = out.get(s);
-//				if (d != null)
-//				{
-//					temp += d;
-//					out.remove(s);
-//				}
-//				out.put(s, temp);
-//			}
-//		}
-//		// Create a list from elements of HashMap
-//        List<Map.Entry<String, Double> > list =
-//               new LinkedList<Map.Entry<String, Double> >(out.entrySet());
-// 
-//        // Sort the list
-//        Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
-//            public int compare(Map.Entry<String, Double> o1,
-//                               Map.Entry<String, Double> o2)
-//            {
-//                return (o2.getValue()).compareTo(o1.getValue());
-//            }
-//        });
-//         
-//        // put data from sorted list to array of strings
-//        ArrayList<String> finale = new ArrayList<String>();
-//        for (Map.Entry<String, Double> aa : list) {
-//            //System.out.println(aa.getKey() + " | " + aa.getValue());
-//        	finale.add(aa.getKey());
-//        }
-//        return finale;
-//	}
-//	
+	// get html string stored in database
+	public static String get_html(String url)
+	{
+		MongoDatabase CrawlerDB = Indexer.get_database("Crawler", null);
+		MongoCollection<Document> CrawlerCol = Indexer.get_collection(CrawlerDB, "Crawler");
+		FindIterable<Document> iterDoc = CrawlerCol.find(Filters.eq("Url",url));
+		MongoCursor<Document> it = iterDoc.iterator();
+		String html_doc ;
+		if(it.hasNext())
+		{
+			Document doc = it.next();
+			html_doc = doc.getString("html");
+		}
+		else
+		{
+			System.out.println("No html");
+			html_doc = "";
+		}
+		return html_doc;
+		}
+	public static void rank_phrase__search_documents()
+	{
+		HashMap<String, Integer> urls_phrase_hash = new HashMap<String, Integer>();
+		System.out.println("rank_phrase__search_documents: "+urls.size());
+		for(int i=0;i<urls.size();i++)
+		{
+			urls_phrase_hash.put(urls.get(i), 1);
+		}
+		int size_docs_check = 0;
+		int size_docs_check_left = 0;
+
+		for (Map.Entry<String,ArrayList<Document>> entry : ReterivedDocuments.entrySet()) 
+		{
+			ArrayList<Document> arr_docs = entry.getValue();
+			ArrayList<Document> new_arr_docs = new ArrayList<Document>();
+			for(int j =0;j<arr_docs.size();j++)
+			{
+				if(urls_phrase_hash.get(arr_docs.get(j).getString("DOC_ID")) != null)
+				{
+					new_arr_docs.add(arr_docs.get(j));
+				}
+				else
+				{
+					size_docs_check_left++;
+				}
+			}
+			ReterivedDocuments.put(entry.getKey(), new_arr_docs);
+			size_docs_check += ReterivedDocuments.get(entry.getKey()).size();
+   	}
+		System.out.println("New Size of Ranker urls = "+size_docs_check);
+		
+	}
+	// Ranker Code ------------------------------------------------------------------------------------------
 	
 	public static double IDF(int DF)
 	{
@@ -896,6 +735,8 @@ public class HomeController {
 	public static ArrayList<String> TF_IDF()
 	{	
 			//entry = map.entrySet().iterator().next();
+		MongoDatabase CrawlerDB = Indexer.get_database("Crawler", null);
+		MongoCollection<Document> CrawlerCol = Indexer.get_collection(CrawlerDB, "Crawler");
 		for (ArrayList<Document> entry : ReterivedDocuments.values())
 		{	
 			docs = entry;
@@ -905,7 +746,7 @@ public class HomeController {
 				//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
 				String s = it.getString("DOC_ID");
 				Double DbNormTF = it.getDouble("TF");
-				//FindIterable<Document> iterDoc2 = rankerColl.find(Filters.eq("Url", s));
+				FindIterable<Document> iterDoc2 = CrawlerCol.find(Filters.eq("Url", s));
 				
 				if(DbNormTF < 0.5)
 				{
@@ -913,7 +754,7 @@ public class HomeController {
 					int title = it.getInteger("Title");
 					int headers = it.getInteger("Headers");
 					int body = it.getInteger("Other");
-					//int popularity = iterDoc2.first().getInteger("popularity");
+					int popularity = iterDoc2.first().getInteger("popularity");
 //					List<Integer> pos = it.getList("POSITION", Integer.class);
 //					int firstPosition = pos.get(0);
 					
@@ -924,17 +765,21 @@ public class HomeController {
 					Double ntf = (10*title + 5*headers + body)/totalWords;
 					
 					//TODO:Calculate TF*IDF
-					//temp = ntf*IDF(DF)*popularity;
-					temp = ntf*IDF(DF);
+					temp = ntf*IDF(DF) + popularity/1000000.0;
+					//temp = ntf*IDF(DF);
 				}
 				
 				Double d = out.get(s);
 				if (d != null)
 				{
 					temp += d;
-					out.remove(s);
+					out.put(s, temp);
 				}
-				out.put(s, temp);
+				else
+				{
+					out.put(s, temp);
+				}
+				
 			}
 		}
 		// Create a list from elements of HashMap
@@ -954,147 +799,12 @@ public class HomeController {
         // put data from sorted list to array of strings
         ArrayList<String> finale = new ArrayList<String>();
         for (Map.Entry<String, Double> aa : list) {
-            System.out.println(aa.getKey() + " | " + aa.getValue());
+            //System.out.println(aa.getKey() + " | " + aa.getValue());
         	finale.add(aa.getKey());
         }
         return finale;
 	}
-	// phrase search
-	
-//public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>myMap){
-//		
-//		// 34an ana msh 3auzo ye3dl fl trteb
-//		HashMap<String , ArrayList<Document>> UrlMap =  new LinkedHashMap<String,ArrayList<Document>>() ; // -> 
-//		
-//		Iterator<Entry<String , ArrayList<Document>>> myIterator = myMap.entrySet().iterator() ;
-//		//System.out.println("no errors at start phrase search");
-//		//iterating over the main map 
-//		while(myIterator.hasNext())
-//		{
-//			// accessing the element which the iterator points at
-//			Map.Entry<String, ArrayList<Document>> newMap = myIterator.next(); 
-//			
-//			//iterating over its whole documents and storing it in the new hashmap
-//			int size = newMap.getValue().size() ; 
-//			for(int i = 0 ; i < size ; i ++)
-//			{
-//				// check if the url exists before in our map 
-//				var check = UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")); 
-//				if(check != null) // if yes add this document to it
-//					UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")).add(newMap.getValue().get(i)); // el document el feha el esm -> ahmed masln
-//				else // create new place to it and add the document in the List 
-//				{
-//					UrlMap.put(newMap.getValue().get(i).getString("DOC_ID"),new ArrayList<Document>()); // create new slot with this URL as a key
-//					UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")).add(newMap.getValue().get(i)); // add the document in its array
-//				}
-//			}			
-//		}
-//		
-//		// to store the positions and work on them 
-//		// brdu msh 3auz a3dl fl trteb
-//		//System.out.println("no errors at middle phrase search");
-//		HashMap<String , ArrayList<Integer>> Positions =  new LinkedHashMap<String,ArrayList<Integer>>(); 
-//		
-//		
-//		// iterate over the URLMap
-//		myIterator = UrlMap.entrySet().iterator(); 
-//		
-//		
-//		ArrayList<String> URLContainer = new ArrayList<> (); // hya de el ha7ot feha elly l2eto 
-//		
-//		while (myIterator.hasNext())
-//		{
-//			Map.Entry<String, ArrayList<Document>> newMap = myIterator.next(); 
-//			int size = newMap.getValue().size() ; 
-//			if(size== myMap.size()) // if the URL has number of document = number of elements which we search on it  => doc feha ahmed , w doc feha sabry w doc feha abdelhady
-//			{
-//				// iterating over all elements and store their positions
-//				//System.out.println("no errors at mid phrase search");
-//				for(int i = 0 ; i < size ; i ++)
-//				{
-//					// ana msh mot2kd mn mwdo3 el casting da bs atmna eno yeshtghl
-//					Positions.put(newMap.getValue().get(i).getString("Word"), 
-//							(ArrayList<Integer>)newMap.getValue().get(i).getList("POSITION", // h3dy 3la ahmed ageb el positions bta3tha w a3dy 3la sabry ageb el positions w keda
-//									Integer.class));					
-//				}
-//				
-//				
-//				Iterator<Entry<String , ArrayList<Integer>>> IT = Positions.entrySet().iterator() ;
-//				Map.Entry<String, ArrayList<Integer>> FirstName = IT.next(); 
-////				System.out.println("phrase searching test ,URL: "+newMap.getValue().get(0).getString("DOC_ID"));
-////				
-////				for(int i =0;i<size;i++)
-////				{
-////					
-////					System.out.println(Copy_String_list.get(i)+" :");
-////					System.out.println(FirstName.getValue());
-////					if(i !=size-1)
-////					{
-////						FirstName = IT.next();
-////					}
-////					
-////				}
-//				//System.out.println("no errors at mid phrase search");
-//				// hena b5ly shoghly dayman 3la awl kelma fl searching  w bdwr 3ala el sequance menha baa
-//				for(int m = 0; m < size ; m++) {
-//					//System.out.println("Pharse test1 "+FirstName.getValue().size());
-//			
-//					if(FirstName.getValue().size() > m && compare (size , FirstName.getValue().get(m) , IT, 2) ) // el lvlIndc = 2 34an lw el size = 4 ab2a akny shaghal 1 based fa na habd2 mn level 2
-//						{
-//							// check for at least 1 lw l2et 
-//							// add the URl to the founded
-//							URLContainer.add(newMap.getKey());
-//							break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
-//						}
-//				}
-//				//System.out.println("no errors at mid phrase search");
-//			}
-//		}
-//		//System.out.println("no errors at end phrase search");
-//		return URLContainer; 
-//	}
-//	
-//	public static Boolean compare (int size , Integer number , Iterator<Entry<String , ArrayList<Integer>>> IT, int LvlInd)
-//	{
-//		// base case 
-//		if(LvlInd == size) { // last level 34an ana shghal 1 based
-//			if(IT.hasNext())
-//			{	
-//				Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
-//				for(int i = 0 ; i < FirstRow.getValue().size(); i++)
-//				{
-//					if(FirstRow.getValue().get(i) == number + 1 )
-//						return true ; // found the last index 
-//					else if (FirstRow.getValue().get(i) > number ) return false ; 
-//				}
-//			}
-//			return false ;
-//		}
-//		
-//		// found the sequence 
-//		Boolean found = false ;
-//		if(IT.hasNext())
-//		{
-//			Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
-//			for(int i = 0 ; i < FirstRow.getValue().size(); i++)
-//			{
-//				if(FirstRow.getValue().get(i) == number + 1 )
-//				{
-//					// ana msh 3arf 7war el hasnext de hya el bt5ly el iterator yet7rk wla a lw hya fa yeb2a keda el shoghl tmaam
-//					//IT.hasNext();
-//					IT.next();
-//					found = compare(size , number + 1 , IT,LvlInd + 1) ; // found the last index 
-//				}
-//				else if (FirstRow.getValue().get(i) > number ) return false ; 
-//				
-//				if(found == true) return true;
-//			}
-//		}
-//
-//		
-//		return found;
-//	}
-	
+	// phrase search ------------------------------------------------------------------------------------
 	public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>myMap){
 		System.out.println("Phrase Searching Started");
 		// 34an ana msh 3auzo ye3dl fl trteb
@@ -1129,11 +839,8 @@ public class HomeController {
 		// brdu msh 3auz a3dl fl trteb
 		HashMap<String , ArrayList<Integer>> Positions =  new LinkedHashMap<String,ArrayList<Integer>>(); 
 		
-		
 		// iterate over the URLMap
 		myIterator = UrlMap.entrySet().iterator(); 
-		
-		
 		ArrayList<String> URLContainer = new ArrayList<> (); // hya de el ha7ot feha elly l2eto 
 		
 		while (myIterator.hasNext())
@@ -1170,7 +877,6 @@ public class HomeController {
 								int indexof_str = S1.toLowerCase().indexOf(last_query.toLowerCase());
 								if(indexof_str != -1)
 								{
-									System.out.println(indexof_str);
 									URLContainer.add(newMap.getKey());
 									break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
 								} 
@@ -1236,74 +942,204 @@ public class HomeController {
 		return found;
 	}
 
-	public MongoDatabase get_database(String databasename, String connection) {
 
-		 MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-		 MongoDatabase db = mongoClient2.getDatabase(databasename);
-		 return db;
-	}
-
-	// function get collection from database
-	public  MongoCollection<Document> get_collection(MongoDatabase db, String Collection_Name) {
-
-		MongoCollection<Document> col = db.getCollection(Collection_Name);
-		return col;
-	}
-	
-	// get html string stored in database
-	public static String get_html(String url)
-	{
-		MongoDatabase CrawlerDB = Indexer.get_database("Crawler", null);
-		MongoCollection<Document> CrawlerCol = Indexer.get_collection(CrawlerDB, "Crawler");
-		FindIterable<Document> iterDoc = CrawlerCol.find(Filters.eq("Url",url));
-		MongoCursor<Document> it = iterDoc.iterator();
-		String html_doc ;
-		if(it.hasNext())
-		{
-			Document doc = it.next();
-			html_doc = doc.getString("html");
-		}
-		else
-		{
-			System.out.println("No html");
-			html_doc = "";
-		}
-		return html_doc;
-		}
-	public static void rank_phrase__search_documents()
-	{
-		HashMap<String, Integer> urls_phrase_hash = new HashMap<String, Integer>();
-		System.out.println("rank_phrase__search_documents: "+urls.size());
-		for(int i=0;i<urls.size();i++)
-		{
-			urls_phrase_hash.put(urls.get(i), 1);
-		}
-		int size_docs_check = 0;
-		int size_docs_check_left = 0;
-
-		for (Map.Entry<String,ArrayList<Document>> entry : ReterivedDocuments.entrySet()) 
-		{
-			ArrayList<Document> arr_docs = entry.getValue();
-			ArrayList<Document> new_arr_docs = new ArrayList<Document>();
-			for(int j =0;j<arr_docs.size();j++)
-			{
-				if(urls_phrase_hash.get(arr_docs.get(j).getString("DOC_ID")) != null)
-				{
-					new_arr_docs.add(arr_docs.get(j));
-				}
-				else
-				{
-					size_docs_check_left++;
-				}
-			}
-			ReterivedDocuments.put(entry.getKey(), new_arr_docs);
-			size_docs_check += ReterivedDocuments.get(entry.getKey()).size();
-    	}
-		System.out.println("New Size of Ranker urls = "+size_docs_check);
-		System.out.println("Left Size of Ranker urls = "+size_docs_check_left);
-		
-	}
 }
+
+
+// old ranker --------------------------------------------------------------------------------------------
+//public static double IDF()
+//{
+//	return Math.log10((double)TotalPages/docs.size());
+//}
+
+//public static ArrayList<String> TF_IDF()
+//{	
+//		//entry = map.entrySet().iterator().next();
+//	for (ArrayList<Document> entry : ReterivedDocuments.values())
+//	{	
+//		docs = entry;
+//		for (Document it : docs)		
+//		{
+//			//TODO:Calculate the tf of each doc by the formula: tf = 10*title + 5*header + body
+//			int title = it.getInteger("Title");
+//			int headers = it.getInteger("Headers");
+//			int body = it.getInteger("Other");
+//			String s = it.getString("DOC_ID");
+//			
+//			int tf = 10*title + 5*headers + body;
+//			//TODO:Calculate the normalized tf
+//			Double ntf = 1.0*tf;
+//			
+//			//TODO:Calculate TF*IDF
+//			double temp = ntf*IDF();
+//			Double d = out.get(s);
+//			if (d != null)
+//			{
+//				temp += d;
+//				out.remove(s);
+//			}
+//			out.put(s, temp);
+//		}
+//	}
+//	// Create a list from elements of HashMap
+//    List<Map.Entry<String, Double> > list =
+//           new LinkedList<Map.Entry<String, Double> >(out.entrySet());
+//
+//    // Sort the list
+//    Collections.sort(list, new Comparator<Map.Entry<String, Double> >() {
+//        public int compare(Map.Entry<String, Double> o1,
+//                           Map.Entry<String, Double> o2)
+//        {
+//            return (o2.getValue()).compareTo(o1.getValue());
+//        }
+//    });
+//     
+//    // put data from sorted list to array of strings
+//    ArrayList<String> finale = new ArrayList<String>();
+//    for (Map.Entry<String, Double> aa : list) {
+//        //System.out.println(aa.getKey() + " | " + aa.getValue());
+//    	finale.add(aa.getKey());
+//    }
+//    return finale;
+//}
+//
+
+// old phrase search -------------------------------------------------------------------------------------
+
+//public static ArrayList<String> phraseSearch(HashMap<String,ArrayList<Document>>myMap){
+//
+//// 34an ana msh 3auzo ye3dl fl trteb
+//HashMap<String , ArrayList<Document>> UrlMap =  new LinkedHashMap<String,ArrayList<Document>>() ; // -> 
+//
+//Iterator<Entry<String , ArrayList<Document>>> myIterator = myMap.entrySet().iterator() ;
+////System.out.println("no errors at start phrase search");
+////iterating over the main map 
+//while(myIterator.hasNext())
+//{
+//	// accessing the element which the iterator points at
+//	Map.Entry<String, ArrayList<Document>> newMap = myIterator.next(); 
+//	
+//	//iterating over its whole documents and storing it in the new hashmap
+//	int size = newMap.getValue().size() ; 
+//	for(int i = 0 ; i < size ; i ++)
+//	{
+//		// check if the url exists before in our map 
+//		var check = UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")); 
+//		if(check != null) // if yes add this document to it
+//			UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")).add(newMap.getValue().get(i)); // el document el feha el esm -> ahmed masln
+//		else // create new place to it and add the document in the List 
+//		{
+//			UrlMap.put(newMap.getValue().get(i).getString("DOC_ID"),new ArrayList<Document>()); // create new slot with this URL as a key
+//			UrlMap.get(newMap.getValue().get(i).getString("DOC_ID")).add(newMap.getValue().get(i)); // add the document in its array
+//		}
+//	}			
+//}
+//
+//// to store the positions and work on them 
+//// brdu msh 3auz a3dl fl trteb
+////System.out.println("no errors at middle phrase search");
+//HashMap<String , ArrayList<Integer>> Positions =  new LinkedHashMap<String,ArrayList<Integer>>(); 
+//
+//
+//// iterate over the URLMap
+//myIterator = UrlMap.entrySet().iterator(); 
+//
+//
+//ArrayList<String> URLContainer = new ArrayList<> (); // hya de el ha7ot feha elly l2eto 
+//
+//while (myIterator.hasNext())
+//{
+//	Map.Entry<String, ArrayList<Document>> newMap = myIterator.next(); 
+//	int size = newMap.getValue().size() ; 
+//	if(size== myMap.size()) // if the URL has number of document = number of elements which we search on it  => doc feha ahmed , w doc feha sabry w doc feha abdelhady
+//	{
+//		// iterating over all elements and store their positions
+//		//System.out.println("no errors at mid phrase search");
+//		for(int i = 0 ; i < size ; i ++)
+//		{
+//			// ana msh mot2kd mn mwdo3 el casting da bs atmna eno yeshtghl
+//			Positions.put(newMap.getValue().get(i).getString("Word"), 
+//					(ArrayList<Integer>)newMap.getValue().get(i).getList("POSITION", // h3dy 3la ahmed ageb el positions bta3tha w a3dy 3la sabry ageb el positions w keda
+//							Integer.class));					
+//		}
+//		
+//		
+//		Iterator<Entry<String , ArrayList<Integer>>> IT = Positions.entrySet().iterator() ;
+//		Map.Entry<String, ArrayList<Integer>> FirstName = IT.next(); 
+////		System.out.println("phrase searching test ,URL: "+newMap.getValue().get(0).getString("DOC_ID"));
+////		
+////		for(int i =0;i<size;i++)
+////		{
+////			
+////			System.out.println(Copy_String_list.get(i)+" :");
+////			System.out.println(FirstName.getValue());
+////			if(i !=size-1)
+////			{
+////				FirstName = IT.next();
+////			}
+////			
+////		}
+//		//System.out.println("no errors at mid phrase search");
+//		// hena b5ly shoghly dayman 3la awl kelma fl searching  w bdwr 3ala el sequance menha baa
+//		for(int m = 0; m < size ; m++) {
+//			//System.out.println("Pharse test1 "+FirstName.getValue().size());
+//	
+//			if(FirstName.getValue().size() > m && compare (size , FirstName.getValue().get(m) , IT, 2) ) // el lvlIndc = 2 34an lw el size = 4 ab2a akny shaghal 1 based fa na habd2 mn level 2
+//				{
+//					// check for at least 1 lw l2et 
+//					// add the URl to the founded
+//					URLContainer.add(newMap.getKey());
+//					break  ; // e5rog w dwr 3la URL tany ykon feh el sequence da
+//				}
+//		}
+//		//System.out.println("no errors at mid phrase search");
+//	}
+//}
+////System.out.println("no errors at end phrase search");
+//return URLContainer; 
+//}
+//
+//public static Boolean compare (int size , Integer number , Iterator<Entry<String , ArrayList<Integer>>> IT, int LvlInd)
+//{
+//// base case 
+//if(LvlInd == size) { // last level 34an ana shghal 1 based
+//	if(IT.hasNext())
+//	{	
+//		Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
+//		for(int i = 0 ; i < FirstRow.getValue().size(); i++)
+//		{
+//			if(FirstRow.getValue().get(i) == number + 1 )
+//				return true ; // found the last index 
+//			else if (FirstRow.getValue().get(i) > number ) return false ; 
+//		}
+//	}
+//	return false ;
+//}
+//
+//// found the sequence 
+//Boolean found = false ;
+//if(IT.hasNext())
+//{
+//	Map.Entry<String, ArrayList<Integer>> FirstRow = IT.next(); 
+//	for(int i = 0 ; i < FirstRow.getValue().size(); i++)
+//	{
+//		if(FirstRow.getValue().get(i) == number + 1 )
+//		{
+//			// ana msh 3arf 7war el hasnext de hya el bt5ly el iterator yet7rk wla a lw hya fa yeb2a keda el shoghl tmaam
+//			//IT.hasNext();
+//			IT.next();
+//			found = compare(size , number + 1 , IT,LvlInd + 1) ; // found the last index 
+//		}
+//		else if (FirstRow.getValue().get(i) > number ) return false ; 
+//		
+//		if(found == true) return true;
+//	}
+//}
+//
+//
+//return found;
+//}
+
 
 
 //Elements headers = htmldoc.select("h1");
@@ -1376,3 +1212,155 @@ public class HomeController {
 //	System.out.println("word : "+Copy_String_list.get(j));
 //	break;
 //}
+
+
+//int indexof_phrase = html_string.indexOf(last_query);
+//if(indexof_phrase !=-1)
+//{
+//	if(indexof_phrase +100 <html_string.length())
+//	{
+//		description = html_string.substring(indexof_phrase,indexof_phrase+100);	
+//	}
+//	else
+//	{
+//		description = html_string.substring(indexof_phrase);
+//	}		
+//}
+//else
+//{	
+//	for(int j =0;j<Copy_String_list.size();j++)
+//	{
+//		//System.out.println("S"+j+Copy_String_list.get(j));
+//		// check headers & paragraphs
+//		if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//			
+//			break;
+//		}
+//		else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
+//			break;
+//		}
+//		else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//			break;
+//		}
+//		else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//			break;
+//		}
+//		else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//			break;
+//		}
+//		else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
+//			System.out.println("body");
+//			break;
+//		}
+//	}
+//}
+//description = Jsoup.clean(description, Whitelist.none());
+//description.indexOf(query);
+
+
+
+//int len_query = searchword.length();
+//if(indexof_str -size_before_after >0)
+//{
+//	//description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+//	//description2 = s1.substring(indexof_str-size_before_after,indexof_str);
+//	//description2 +="<strong>" ;	
+//	
+//}
+//else
+//{
+//	description2 = s1.substring(0,indexof_str);
+//	description2 +="<strong>" ;	
+//}
+//if(indexof_str+len_query +size_before_after <s1.length())
+//{
+//	
+//	description2 += s1.substring(indexof_str,indexof_str+len_query);
+//	description2 +="</strong>" ;
+//	description2 += s1.substring(indexof_str+len_query,indexof_str+len_query+size_before_after);
+//	
+//}
+//else
+//{
+//	//description2 += s1.substring(len_query);
+//	description2 += s1.substring(indexof_str,indexof_str+len_query);
+//	//description += s1.substring(indexof_str,indexof_str+len_query);
+//	description2 +="</strong>" ;
+//	description2 += s1.substring(indexof_str+len_query);
+//
+//}		
+
+//
+//int indexof_phrase = html_string.indexOf(query);
+//if(indexof_phrase !=-1)
+//{
+//	if(indexof_phrase +100 <html_string.length())
+//	{
+//		description = html_string.substring(indexof_phrase,indexof_phrase+100);	
+//		System.out.println("Description of phrase = "+description);
+//	}
+//	else
+//	{
+//		description = html_string.substring(indexof_phrase);
+//	}		
+//}
+//else
+//{	
+//	for(int j =0;j<Copy_String_list.size();j++)
+//	{
+//		
+//		// check headers & paragraphs
+//		if( htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h1:contains("+Copy_String_list.get(j)+")").toString();
+//			
+//			break;
+//		}
+//		else if(htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h2:contains("+Copy_String_list.get(j)+")").toString();		
+//			break;
+//		}
+//		else if(htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h3:contains("+Copy_String_list.get(j)+")").toString();
+//			break;
+//		}
+//		else if(htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("h4:contains("+Copy_String_list.get(j)+")").toString();
+//			break;
+//		}
+//		else if(htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			String s = new String();
+//			description = htmldoc.select("h5:contains("+Copy_String_list.get(j)+")").toString();
+//			break;
+//		}
+//		else if(htmldoc.select("body:contains("+Copy_String_list.get(j)+")").toString() != "")
+//		{
+//			description = htmldoc.select("body:contains("+Copy_String_list.get(j)+")").first().toString();
+//			System.out.println("body");
+//			break;
+//		}
+//	}
+//}
+//description = Jsoup.clean(description, Whitelist.none());
+//
+//description = doc.select("p:contains("+"dagbanli"+")").toString();
+//description = doc.select("p:first-of-type").toString();
+//System.out.println("Des: "+description);
+//description = doc.select("free").toString();
+

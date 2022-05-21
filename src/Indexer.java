@@ -3,10 +3,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
+import org.jsoup.select.Evaluator.ContainsText;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoClientURI;
+//import com.mongodb.MongoClientURI;
 import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
@@ -27,14 +28,34 @@ import java.io.IOException;
 import java.lang.UnknownError;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-@SuppressWarnings("deprecation")
-public class Indexer {
+//@SuppressWarnings("deprecation")
+public class Indexer implements Runnable{
 
+	/////////////////////////////////////////////////////////////////////////
+	// some global data that will be used in all functions 
 	static Map<String, Integer> HashForDf = new HashMap<>();
-
+	static HashMap<String,Integer> url_indexer = new HashMap<String, Integer>();
 	final static String indexer_database_connection = "mongodb+srv://ahmedsabry:searchengine@searchengine.tnuaa.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 	final static String crawler_database_connection = "mongodb+srv://Waer:RHhDdESAKY5HvzZ@cluster0.jafiz.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
+	final static MongoDatabase Crawlerdb = get_database("Crawler", crawler_database_connection);	
+	final static MongoCollection<Document> crawlercol = get_collection(Crawlerdb,"Crawler");
+	final static int size_Docs = (int)crawlercol.countDocuments();
+	final static MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
+	static MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
+	/////////////////////////////////////////////////////////////////////////
+
+	static int NumberOfThreads = 8 ; 
+	public void run() {
+		// todo -> to be implemented to multiThreading
+//		System.out.println();
+
+		System.out.println("Thread " + Thread.currentThread().getName() + "is now Running");
+		run_indexer(NumberOfThreads); 
+	}
+	
 
 	public static void FileOrganizer() {
 		Map<String, Vector<Integer>> hash = new HashMap<>();
@@ -50,10 +71,48 @@ public class Indexer {
 
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
-		System.out.println("Hello");
+		//Logger mongoLogger = Logger.getLogger( "com.mongodb.driver" ); mongoLogger.setLevel(Level.SEVERE);
+		long start_1 = System.currentTimeMillis();
+		System.out.println(crawlercol.countDocuments());
+		// should be done only once so the main thread should be the one who done it 
+		setindexes(indexercol);
+		url_inverted(indexercol);
+		/////////////////////////////
+		ArrayList<Thread> Threads= new ArrayList<>() ; 
+		for(Integer i = 0 ; i < 8 ; i++)
+		{
+			Thread t = new Thread( new Indexer()); 
+			t.setName(i.toString());
+			Threads.add(t); 
+		}
 		
-		run_indexer();
+		System.out.println("Starting");
+		for(int i = 0 ; i < Threads.size() ; i ++)
+			Threads.get(i).start();
+
+
+		System.out.println("Joining");
+		for(int i = 0 ; i < Threads.size() ; i ++)
+			Threads.get(i).join();
 		
+		// lazm a3ml join 3la kol el threads b7es en el main bs hya el te3ml call lel function de
+		System.out.println("Updating the IDF");
+		UpdateIDF(HashForDf,indexercol,size_Docs);
+
+		System.out.println("End Main");
+		long end_1 = System.currentTimeMillis();
+		System.out.println("Time of Indexer "+(end_1-start_1));
+//		
+//		Thread t1 = new Thread(new Indexer()); 
+//		t1.setName("1");
+//		t1.start();
+//		
+//		t1.join();
+//		
+//		System.out.print("End");
+//		
+//		run_indexer();
+
 ////		
 //		// ---------------------------------------------------------------
 //		// what to do
@@ -103,31 +162,36 @@ public class Indexer {
 //		ArrayList<Document> listofdocs = createdocuments(hashtable, 1);
 //		col.insertMany(listofdocs);
 
+
 	}
 
-	public static void run_indexer() {
+	public static void run_indexer(int numberofThreads) {
 		// ------------------------------ get database of links & documents
-		MongoDatabase Crawlerdb = get_database("Crawler", crawler_database_connection);	
-		MongoCollection<Document> crawlercol = get_collection(Crawlerdb,"Crawler");
-		int size_Docs = (int)crawlercol.countDocuments();
-		System.out.println(crawlercol.countDocuments());
-		//ArrayList<Document> docs = crawlercol.find();
 		FindIterable<Document> iterDoc = crawlercol.find();
 		MongoCursor<Document> it = iterDoc.iterator();
-		//Document doc = it.next();
-		//System.out.println(doc);
-		
-		// ------------------------------ get collection of documents & size
-
-		// ------------------------------- loop on documents
-
-		//MongoClient mongoClient2 = MongoClients.create("mongodb://localhost:27017");
-		//MongoDatabase Indexerdb = mongoClient2.getDatabase("Search_index");
-		MongoDatabase Indexerdb = get_database("Search_index", indexer_database_connection);
-		MongoCollection<Document> indexercol = get_collection(Indexerdb, "invertedfile");
-		setindexes(indexercol);
 		boolean stop_indexeing = false;
-		for (int i = 0; i < size_Docs; i++) {
+		int SizeForEachThread= size_Docs / numberofThreads ; 
+		int start = Integer.parseInt(Thread.currentThread().getName()); 
+		int begin = 0;
+		int end = 0;
+		
+		if(start != 7)
+		{
+			begin = start * SizeForEachThread ;
+			end = (start + 1) * SizeForEachThread;
+		}
+		else
+		{
+			begin = start * SizeForEachThread;
+			end = size_Docs;
+		}
+		
+		// moving the iterator to the beginning position for each thread 
+		for(int i=0;i<begin;i++)
+			it.next();
+		
+		
+		for (int i = begin ; i < end  ; i++) {
 			// retrieve document
 			boolean canfetch = true;
 			Document crawlerdoc =null;
@@ -138,37 +202,29 @@ public class Indexer {
 //				i++;
 //			}
 			while(!it.hasNext())
-			{
 				stop_indexeing = true;
-			}
+			
 			if(stop_indexeing)
-			{
 				break;
-			}
+			
 			crawlerdoc = it.next();
 			
 			// check if document needed to be indexed or not from crawler
 
 			
 			org.jsoup.nodes.Document htmldoc = Jsoup.parse( crawlerdoc.getString("html"));
-//			System.out.println("doc "+htmldoc);
-//			try {
-//				Thread.currentThread().sleep(5000);
-//			} catch (InterruptedException e1) {
-//				// TODO Auto-generated catch block
-//				e1.printStackTrace();
-//			}
 			String htmldoc_ID = crawlerdoc.getString("Url");
-			
-
-
-			if(canfetch)
-			{
-				//delete_doc_ID(indexercol,htmldoc_ID,0);
-	
+				// if url found in hashmap delete it to store new link else store directly
+				if(url_indexer.containsKey(htmldoc_ID))
+				{
+					delete_doc_ID(indexercol,htmldoc_ID);
+				}
+				else
+				{
+					url_indexer.put(htmldoc_ID, 1);
+				}
 				// filter documents
 				// detect tags for ranker
-				//String s1 = htmldoc.toString();
 				String s1 = htmldoc.select("*").text();
 				ArrayList<String> string_array = Remove_tags(s1);
 				String title = htmldoc.select("title").text();
@@ -178,53 +234,37 @@ public class Indexer {
 				headers += " " + htmldoc.select("h4").text();
 				headers += " " + htmldoc.select("h5").text();
 				headers += " " + htmldoc.select("h6").text();
-				
-				// String paragraphs = doc.select("p").text();
 	
 				ArrayList<String> headers_array = Remove_tags(headers);
 				ArrayList<String> title_array = Remove_tags(title);
-				// ArrayList<String> paragraphs_array = Remove_tags(paragraphs);
 	
 				// remove stop words from file
 				// array of strings
 				string_array = Remove_Stop_Words(string_array);
 				headers_array = Remove_Stop_Words(headers_array);
 				title_array = Remove_Stop_Words(title_array);
-				// paragraphs_array = Remove_Stop_Words(paragraphs_array);
-				System.out.println("------------------------------------------------------");
-	
-				for (int j = 0; j < string_array.size(); j++) {
-					// System.out.println(string_array.get(j));
-				}
+				
 				string_array = Stemming(string_array);
 				headers_array = Stemming(headers_array);
 				title_array = Stemming(title_array);
-				// paragraphs_array = Stemming(paragraphs_array);
-	
 				Map<String, Integer> hash_headers = new HashMap<String, Integer>();
 				Map<String, Integer> hash_title = new HashMap<String, Integer>();
-				// Map<String, Integer> hash_paragraphs = new HashMap<String, Integer> ();
 				hash_headers = hashtags(hash_headers, headers_array);
 				hash_title = hashtags(hash_title, title_array);
-				// hash_paragraphs = hashtags(hash_paragraphs,paragraphs_array);
 	
 				Map<String, ArrayList<Integer>> hashtable = FileOrgan(string_array);
 				ArrayList<Document> listofdocs = createdocuments(hashtable,htmldoc_ID,hash_title,hash_headers,string_array.size());
 				
 				try {
-					
+					System.out.println("------------------------------------------------------");
 					insertdocs(indexercol,listofdocs);
-					 //indexercol.insertMany(listofdocs);
 				} catch (Exception e) {
 					System.out.println(e);
 				}
-				System.out.println("Document "+i+" is indexed , Remaining Documents = "+(size_Docs-i-1));
-			}
+				System.out.println("Document "+i+" is indexed , Remaining Documents = "+(end-i-1));
+			
 
 		}
-		UpdateIDF(HashForDf,indexercol,size_Docs);
-
-
 	}
 
 	// function get database from mongodb server
@@ -254,33 +294,18 @@ public class Indexer {
 	// Function to clean up the documents
 	public static ArrayList<String> Remove_tags(String s1) {
 
-		// s2 +="احمد ثبري";
-		// s1 +="احمد ثبري";
-		// ---------------------------------------------------------------
-
 		// remove tags
 		s1 = Jsoup.clean(s1, Whitelist.none());
 		s1 = Jsoup.clean(s1, Whitelist.none());
-		// s2 = Jsoup.clean(s2, Whitelist.none());
 		// ----------------------------------------------------------------
 		// remove all characters except English alphabets & numbers
 		// Note : should ask Eng. Ali about removing those characters
-		// s1 = s1.replace(".", " ");
-		// s1 = s1.replaceAll("\\p{Punct}", " ");
+
 		s1 = s1.replaceAll("[^a-zA-Z0-9]", " ");
 		// s1 = s1.replaceAll("[^\\p{InArabic}\\s]", " ");
 		// s1 += s2;
 		// s1 = s1.replaceAll("[^a-zA-Z]", " ");
 		// -----------------------------------------------------------------
-		// test code here
-//		String strArray[] = s1.split(" ");
-//		System.out.println(strArray.length);
-//		for(int i=0;i<strArray.length;i++)
-//		{
-//			System.out.println(strArray[i]);
-//
-//		}
-
 		// -------------------------------------------------------------------
 		// split string to array of strings
 		StringTokenizer str_tokenizer = new StringTokenizer(s1);
@@ -318,14 +343,6 @@ public class Indexer {
 		// string should be filtered from tags & punctuation
 		int x = str.size();
 		str.removeAll(stoparr);
-		// String result = str.stream().collect(Collectors.joining(" "));
-		// assertEquals(result, target);
-//		for (int i = 0; i < str.size(); i++) {
-//			System.out.println(str.get(i));
-//
-//		}
-//		System.out.println(str.size());
-//		System.out.println(x);
 		return str;
 
 	}
@@ -335,25 +352,12 @@ public class Indexer {
 		PorterStemmer stemmer = new PorterStemmer();
 		for (int i = 0; i < string_array.size(); i++) {
 			String temp = new String(string_array.get(i));
-
 			string_array.set(i, stemmer.stemWord(string_array.get(i)));
-//			if (!temp.equals(string_array.get(i))) {
-//				System.out.println(temp + "-" + string_array.get(i)); // print stemmed word & word
-////				if(string_array.get(i).equals("احمد"))
-////				{
-////					break;
-////				}
-//			}
 		}
 
 		return string_array;
 	}
 
-	/////////////////
-
-
- 
-    
 	public static ArrayList<String> filter(String path) {
 		ArrayList<String> Words = new ArrayList<String>();
 		try {
@@ -397,10 +401,13 @@ public class Indexer {
 				pos++; // increment the position
 			} else { // first time ?
 				// increment it in the hash2
-				if (HashForDf.containsKey(string)) // existed before in the IDF list
-					HashForDf.put(string, HashForDf.get(string) + 1);
-				else // first time
-					HashForDf.put(string, 1);
+				synchronized(HashForDf)
+				{
+					if (HashForDf.containsKey(string)) // existed before in the IDF list
+						HashForDf.put(string, HashForDf.get(string) + 1);
+					else // first time
+						HashForDf.put(string, 1);					
+				}
 
 				ArrayList<Integer> A = new ArrayList<>(3);
 				A.add(1); // set TF to 1
@@ -428,9 +435,15 @@ public class Indexer {
 	// create indexes on "WORD" & "DOC_ID" -> like composite key & ascending order
 	public static void setindexes(MongoCollection<Document> col) {
 		// col.drop();
+		try {
 		IndexOptions indexOptions = new IndexOptions().unique(true);
 		String resultCreateIndex = col.createIndex(Indexes.ascending("Word", "DOC_ID"), indexOptions);
 		System.out.println(String.format("Index created: %s", resultCreateIndex));
+		}
+		catch(Exception e)
+		{
+			System.out.println("Collection already indexed");
+		}
 	}
 
 	// convert from hashmap to document to be stored in database
@@ -459,12 +472,7 @@ public class Indexer {
 			doc1.append("Title", no_titles);
 			doc1.append("Other", arr.size() - no_headers - no_titles);
 			listofdocs.add(doc1);
-			//System.out.println("key: " + i + " value: " + inverteddocs.get(i));
 		}
-
-		// listofdocs.add(document1);
-		// listofdocs.add(document2);
-
 		return listofdocs;
 	}
 
@@ -479,11 +487,25 @@ public class Indexer {
 	}
 
 	// delete updated document in crawler from search_index to insert new one
-	public static void delete_doc_ID(MongoCollection<Document> col, String url, int doc_id) {
+	public static void delete_doc_ID(MongoCollection<Document> col, String url) {
 		// col.deleteMany(Filters.eq("DOC_ID",doc_id));
 		col.deleteMany(Filters.eq("DOC_ID", url));
 	}
 
+	// gets unique urls stored in indexer to know if crawler urls is new or pre-stored in database
+	public static void  url_inverted(MongoCollection<Document> col)
+	{
+		//HashMap<String,Integer> url_indexer = new HashMap<String, Integer>();
+		DistinctIterable<String> doc = col.distinct("DOC_ID", String.class);
+		MongoCursor<String> unique_urls = doc.iterator();
+			while(unique_urls.hasNext())
+			{
+				String str = unique_urls.next();
+				System.out.println(str);
+				url_indexer.put(str, 1);
+			}
+		//return url_indexer;
+	}
 	public static Map<String, Integer> hashtags(Map<String, Integer> MetaData, ArrayList<String> arr) {
 		for (int i = 0; i < arr.size(); i++) {
 			if (MetaData.get(arr.get(i)) == null) {
@@ -512,48 +534,3 @@ public class Indexer {
 	}
 
 }
-
-//---------------------------------------------------------------
-
-//// Code Below is for connecting & testing database		
-//		
-////---------------------------------------------------------------
-//
-//// get connection with database server. should pass: Database Name in String
-//MongoDatabase db = get_database("train");
-//
-////---------------------------------------------------------------
-//
-//// get collection from database , should send db & Collection Name String
-//MongoCollection<Document> col = get_collection(db, "ahmed");
-//
-////---------------------------------------------------------------
-//
-//
-//
-////---------------------------------------------------------------
-//
-//Document doc1 = new Document("ahmed","sabry");
-//FindIterable<Document> iterDoc = col.find();
-//Iterator it = iterDoc.iterator();
-////while(it.hasNext())
-////{
-////	
-////	System.out.println(it.next());
-////}
-//String s1 = it.next().toString();
-//Document doc2 = iterDoc.first();
-////doc2 = iterDoc.;
-//System.out.println(doc2.toString());
-//
-//System.out.println(s1);
-////col.insertOne(doc1);
-//System.out.println("bye");
-//try
-//{
-//	col.insertOne(doc2);
-//}
-//catch(Exception e)
-//{
-//	System.out.println("Error in index ");
-//}

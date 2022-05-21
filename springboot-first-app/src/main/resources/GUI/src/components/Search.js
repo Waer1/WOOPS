@@ -108,6 +108,15 @@ const If = ({ condition, children }) => {
         {Numberofresults !== 0 ? `Total results: ${Numberofresults}` : ""}
       </div>
         <Show results={results}/>
+        
+        </If>
+        <If condition={!IsLoading && Iserror}>
+          <Error />
+        </If>
+        <If condition={!IsLoading && !Iserror && Numberofresults === 0}>
+          <NoResult />
+        </If>
+
         <ReactPaginate
         previousLabel={"Previous"}
         nextLabel={"Next"}
@@ -119,14 +128,6 @@ const If = ({ condition, children }) => {
         disabledClassName={"paginationDisabled"}
         activeClassName={"paginationActive"}
       />
-        </If>
-        <If condition={!IsLoading && Iserror}>
-          <Error />
-        </If>
-        <If condition={!IsLoading && !Iserror && Numberofresults === 0}>
-          <NoResult />
-        </If>
-
     </div>
   );
 };
