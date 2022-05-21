@@ -14,7 +14,7 @@
 
 
 2) Indexer
-    1) Create Connection with two database of indexer % Crawler.
+    1) Create Connection with two database of indexer & Crawler.
     2) Create and start Threads
     3) retrieve Documents from Crawler
     4) for each link of Documents check if its already in indexer database or not if yes remove it else do nothing
