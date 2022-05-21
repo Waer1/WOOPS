@@ -1,0 +1,10 @@
+
+WorkLoad
+
+Yousf Khald 		-> Crawler , Frontend interface , voice (Bonus)
+Ahmed Sabry 		-> Indexer , QueryProcessorv,Backend of interface
+Abdelaziz Salah 	-> Indexer , Phrase Search
+Mohab Mohamed		-> Ranker
+
+
+Link Github : https://github.com/Waer1/Light_Search
