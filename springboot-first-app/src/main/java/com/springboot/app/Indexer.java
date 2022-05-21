@@ -59,18 +59,6 @@ public class Indexer implements Runnable{
 	}
 	
 
-//	public static void FileOrganizer() {
-//		Map<String, Vector<Integer>> hash = new HashMap<>();
-//		Vector<Integer> v = new Vector<Integer>();
-//		v.add(12);
-//		hash.get("ahmed");
-//
-//		for (Map.Entry pairEntry : hash.entrySet()) {
-//			Vector<Integer> v1 = (Vector<Integer>) pairEntry.getValue();
-//			System.out.println(pairEntry.getKey() + " : " + v1.elementAt(0));
-//		}
-//	}
-
 	public static void main(String[] args) throws Exception {
 		// TODO Auto-generated method stub
 		//Logger mongoLogger = Logger.getLogger( "com.mongodb.driver" ); mongoLogger.setLevel(Level.SEVERE);
@@ -104,16 +92,7 @@ public class Indexer implements Runnable{
 		System.out.println("End Main");
 		long end_1 = System.currentTimeMillis();
 		System.out.println("Time of Indexer "+(end_1-start_1));
-//		
-//		Thread t1 = new Thread(new Indexer()); 
-//		t1.setName("1");
-//		t1.start();
-//		
-//		t1.join();
-//		
-//		System.out.print("End");
-//		
-//		run_indexer();
+
 
 ////		
 //		// ---------------------------------------------------------------
@@ -127,42 +106,7 @@ public class Indexer implements Runnable{
 //		// 7) insert data in database
 //		// 8) repeat process until you finish all documents
 //
-//		// ---------------------------------------------------------------
-//		// step: 0
-//		// try getting a document from jsoup for testing until crawler is ready
-//
-//		// -----------------------------uncomment------------------------------
-//		MongoDatabase db = get_database("test", indexer_database_connection);
-//		MongoCollection<Document> col = get_collection(db, "ahmed");
-//		org.jsoup.nodes.Document doc = null;
-//		try {
-//			doc = Jsoup.connect("https://en.wikipedia.org/").get();
-//
-//		} catch (Exception e) {
-//			System.out.println("Error in connection ");
-//		}
-//		// ------------------------------------------------------------------
-//
-//		// remove metadata & punctuation
-//
-//		//
-//		String s1 = doc.toString();
-//		ArrayList<String> string_array = Remove_tags(s1);
-//		// remove stop words from file
-//		// array of strings
-//
-//		string_array = Remove_Stop_Words(string_array);
-//		System.out.println("------------------------------------");
-//
-//		for (int i = 0; i < string_array.size(); i++) {
-//			// System.out.println(string_array.get(i));
-//		}
-//		string_array = Stemming(string_array);
-//
-//		// -----------------------------uncomment------------------------------
-//		Map<String, ArrayList<Integer>> hashtable = FileOrgan(string_array);
-//		ArrayList<Document> listofdocs = createdocuments(hashtable, 1);
-//		col.insertMany(listofdocs);
+
 
 
 	}
@@ -197,12 +141,6 @@ public class Indexer implements Runnable{
 			// retrieve document
 			boolean canfetch = true;
 			Document crawlerdoc =null;
-//			//2471
-//			while(i<0)
-//			{
-//				crawlerdoc = it.next();
-//				i++;
-//			}
 			while(!it.hasNext())
 				stop_indexeing = true;
 			
@@ -360,36 +298,6 @@ public class Indexer implements Runnable{
 		return string_array;
 	}
 
-	public static ArrayList<String> filter(String path) {
-		ArrayList<String> Words = new ArrayList<String>();
-		try {
-			// here we should put the path of the file from which we read the input
-			File myObj = new File(path);
-			Scanner myReader = new Scanner(myObj);
-			while (myReader.hasNextLine()) {
-				String data = myReader.nextLine();
-				// System.out.println(data);
-				Words.add(data);
-			}
-			myReader.close();
-		} catch (FileNotFoundException e) {
-			System.out.println("An error occurred.");
-			e.printStackTrace();
-		}
-		ArrayList<String> string_array = new ArrayList<>();
-
-		int size = Words.size();
-		for (int i = 0; i < size; i++) {
-			StringTokenizer str_tokenizer = new StringTokenizer(Words.get(i));
-			// Add tokens to our array
-			while (str_tokenizer.hasMoreTokens()) {
-				string_array.add(str_tokenizer.nextToken());
-			}
-		}
-
-		return string_array;
-	}
-
 	public static Map<String, ArrayList<Integer>> FileOrgan(ArrayList<String> Words) {
 		// -------------------------------------------------------
 		Map<String, ArrayList<Integer>> hash = new HashMap<>(); // String : [TF ,IDF ,positions]
@@ -536,3 +444,46 @@ public class Indexer implements Runnable{
 	}
 
 }
+
+
+//public static ArrayList<String> filter(String path) {
+//	ArrayList<String> Words = new ArrayList<String>();
+//	try {
+//		// here we should put the path of the file from which we read the input
+//		File myObj = new File(path);
+//		Scanner myReader = new Scanner(myObj);
+//		while (myReader.hasNextLine()) {
+//			String data = myReader.nextLine();
+//			// System.out.println(data);
+//			Words.add(data);
+//		}
+//		myReader.close();
+//	} catch (FileNotFoundException e) {
+//		System.out.println("An error occurred.");
+//		e.printStackTrace();
+//	}
+//	ArrayList<String> string_array = new ArrayList<>();
+//
+//	int size = Words.size();
+//	for (int i = 0; i < size; i++) {
+//		StringTokenizer str_tokenizer = new StringTokenizer(Words.get(i));
+//		// Add tokens to our array
+//		while (str_tokenizer.hasMoreTokens()) {
+//			string_array.add(str_tokenizer.nextToken());
+//		}
+//	}
+//
+//	return string_array;
+//}
+
+//public static void FileOrganizer() {
+//Map<String, Vector<Integer>> hash = new HashMap<>();
+//Vector<Integer> v = new Vector<Integer>();
+//v.add(12);
+//hash.get("ahmed");
+//
+//for (Map.Entry pairEntry : hash.entrySet()) {
+//	Vector<Integer> v1 = (Vector<Integer>) pairEntry.getValue();
+//	System.out.println(pairEntry.getKey() + " : " + v1.elementAt(0));
+//}
+//}
