@@ -1,6 +1,17 @@
 
-Name:              		Sec:        B.N.:
-Ahmed Sabry Abdelrady Ahmed	1		4
-Abdelaziz Salah Mohamed Abdo    2               3
-Mohab Mohamed Zaglol		2		27
-Yousef Khaled Elsayed Waer      2		37
+Name:              		Sec:        B.N.:	email
+Ahmed Sabry Abdelrady Ahmed	1		4	ahmedsabry232345@gmail.com
+Abdelaziz Salah Mohamed Abdo    2               3	Abdelaziz132001@gmail.com
+Mohab Mohamed Zaglol		2		27	hoobamz@gmail.com
+Yousef Khaled Elsayed Waer      2		37	elwaeryousef@gmail.com
+
+
+WorkLoad
+
+Yousf Khald 		-> Crawler , Frontend interface , voice (Bonus)
+Ahmed Sabry 		-> Indexer , QueryProcessorv,Backend of interface
+Abdelaziz Salah 	-> Indexer , Phrase Search
+Mohab Mohamed		-> Ranker
+
+
+Link Github : https://github.com/Waer1/Light_Search
